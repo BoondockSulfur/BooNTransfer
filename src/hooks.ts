@@ -59,7 +59,9 @@ export function useDraggable() {
 
   return {
     handleProps: { onMouseDown },
-    style: { transform: `translate(${pos.x}px, ${pos.y}px)` } as React.CSSProperties,
+    style: {
+      transform: `translate(${pos.x}px, ${pos.y}px)`,
+    } as React.CSSProperties,
   };
 }
 

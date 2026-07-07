@@ -36,12 +36,7 @@ export interface ConnectResult {
 
 export type TransferDirection = "upload" | "download";
 export type TransferStatus =
-  | "queued"
-  | "running"
-  | "paused"
-  | "completed"
-  | "failed"
-  | "cancelled";
+  "queued" | "running" | "paused" | "completed" | "failed" | "cancelled";
 
 export interface TransferItem {
   id: string;

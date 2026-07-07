@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { api, onQueueUpdate, onTransferProgress } from "./api";
+import { api, onFileSaved, onQueueUpdate, onTransferProgress } from "./api";
 import { useT } from "./i18n";
 import { checkForUpdate, installPendingUpdate } from "./updater";
 import ConflictDialog from "./components/ConflictDialog";
 import ConnectionManager from "./components/ConnectionManager";
-import EditorModal, { type EditorTarget } from "./components/EditorModal";
-import FilePane, { type PaneHandle, type PaneKind } from "./components/FilePane";
+import FilePane, {
+  type PaneHandle,
+  type PaneKind,
+} from "./components/FilePane";
 import HostKeyDialog from "./components/HostKeyDialog";
 import StatusBar from "./components/StatusBar";
 import SyncDialog from "./components/SyncDialog";
@@ -20,7 +22,7 @@ import type {
   SyncDirection,
   SyncItem,
 } from "./types";
-import { openDetached } from "./windows";
+import { openDetached, openEditorWindow } from "./windows";
 
 type TransferDir = "upload" | "download";
 
@@ -76,10 +78,10 @@ export default function App() {
   const [showConn, setShowConn] = useState(false);
   const [hostKey, setHostKey] = useState<HostKeyReq | null>(null);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
-  const [sync, setSync] = useState<{ localDir: string; remoteDir: string } | null>(
-    null,
-  );
-  const [editor, setEditor] = useState<EditorTarget | null>(null);
+  const [sync, setSync] = useState<{
+    localDir: string;
+    remoteDir: string;
+  } | null>(null);
 
   const localRef = useRef<PaneHandle>(null);
   const remoteRef = useRef<PaneHandle>(null);
@@ -117,6 +119,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // Refresh the matching pane when a file is saved in any editor window.
+  useEffect(() => {
+    const u = onFileSaved((isLocal) => (isLocal ? bumpLocal() : bumpRemote()));
+    return () => void u.then((f) => f());
+  }, [bumpLocal, bumpRemote]);
 
   // Check for an app update on startup (no-op in dev / browser).
   useEffect(() => {
@@ -328,11 +336,15 @@ export default function App() {
     );
   };
   const detachQueue = () =>
-    openDetached("queue", {}, {
-      title: `${tr("queue.title")} — BooN Transfer`,
-      width: 760,
-      height: 420,
-    });
+    openDetached(
+      "queue",
+      {},
+      {
+        title: `${tr("queue.title")} — BooN Transfer`,
+        width: 760,
+        height: 420,
+      },
+    );
 
   const openSync = () => {
     if (!connection) return;
@@ -362,7 +374,9 @@ export default function App() {
       destSize: 0,
       policy: "overwrite",
     });
-    const uploads = items.filter((i) => i.direction === "upload").map(toResolved);
+    const uploads = items
+      .filter((i) => i.direction === "upload")
+      .map(toResolved);
     const downloads = items
       .filter((i) => i.direction === "download")
       .map(toResolved);
@@ -488,7 +502,7 @@ export default function App() {
           onStatus={setStatus}
           onTransferFiles={handleTransfer}
           onDetach={detachLocal}
-          onOpenFile={setEditor}
+          onOpenFile={openEditorWindow}
         />
 
         <div
@@ -540,7 +554,7 @@ export default function App() {
           onStatus={setStatus}
           onTransferFiles={handleTransfer}
           onDetach={activeTab ? detachRemote : undefined}
-          onOpenFile={setEditor}
+          onOpenFile={openEditorWindow}
         />
       </main>
 
@@ -558,13 +572,6 @@ export default function App() {
         <ConnectionManager
           onClose={() => setShowConn(false)}
           onConnect={(id) => void doConnect(id)}
-        />
-      )}
-      {editor && (
-        <EditorModal
-          {...editor}
-          onClose={() => setEditor(null)}
-          onSaved={(isLocal) => (isLocal ? bumpLocal() : bumpRemote())}
         />
       )}
       {sync && (

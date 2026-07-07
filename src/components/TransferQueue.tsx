@@ -40,24 +40,36 @@ function Row({
       <span className="qstatus">{t.status}</span>
       <span className="qactions">
         {t.status === "running" && (
-          <button title={tr("queue.pause")} onClick={() => api.transferPause(t.id)}>
+          <button
+            title={tr("queue.pause")}
+            onClick={() => api.transferPause(t.id)}
+          >
             ⏸
           </button>
         )}
         {t.status === "paused" && (
-          <button title={tr("queue.resume")} onClick={() => api.transferResume(t.id)}>
+          <button
+            title={tr("queue.resume")}
+            onClick={() => api.transferResume(t.id)}
+          >
             ▶
           </button>
         )}
         {(t.status === "running" ||
           t.status === "paused" ||
           t.status === "queued") && (
-          <button title={tr("queue.cancel")} onClick={() => api.transferCancel(t.id)}>
+          <button
+            title={tr("queue.cancel")}
+            onClick={() => api.transferCancel(t.id)}
+          >
             ✕
           </button>
         )}
         {(t.status === "failed" || t.status === "cancelled") && (
-          <button title={tr("queue.retry")} onClick={() => api.transferRetry(t.id)}>
+          <button
+            title={tr("queue.retry")}
+            onClick={() => api.transferRetry(t.id)}
+          >
             ↻
           </button>
         )}
@@ -70,7 +82,9 @@ function Row({
             ✓?
           </button>
         )}
-        {check && <span className={`check check-${check}`}>{tr(`check.${check}`)}</span>}
+        {check && (
+          <span className={`check check-${check}`}>{tr(`check.${check}`)}</span>
+        )}
       </span>
       {t.error && (
         <span className="qerror" title={t.error}>
@@ -87,17 +101,24 @@ export default function TransferQueue({ onDetach }: { onDetach?: () => void }) {
   const setStatus = useStore((s) => s.setStatus);
   const [checks, setChecks] = useState<Record<string, CheckState>>({});
   const active = transfers.filter(
-    (t) => t.status === "running" || t.status === "queued" || t.status === "paused",
+    (t) =>
+      t.status === "running" || t.status === "queued" || t.status === "paused",
   ).length;
 
   const verify = async (t: TransferItem) => {
     setChecks((c) => ({ ...c, [t.id]: "pending" }));
     try {
-      const r = await api.verifyTransfer(t.connectionId, t.localPath, t.remotePath);
+      const r = await api.verifyTransfer(
+        t.connectionId,
+        t.localPath,
+        t.remotePath,
+      );
       const state: CheckState = !r.supported ? "na" : r.matches ? "ok" : "fail";
       setChecks((c) => ({ ...c, [t.id]: state }));
-      if (state === "fail") setStatus(tr("status.checkFail", { name: t.name }), "error");
-      else if (state === "ok") setStatus(tr("status.checkOk", { name: t.name }), "success");
+      if (state === "fail")
+        setStatus(tr("status.checkFail", { name: t.name }), "error");
+      else if (state === "ok")
+        setStatus(tr("status.checkOk", { name: t.name }), "success");
       else setStatus(tr("status.checkNa", { name: t.name }));
     } catch (e) {
       setChecks((c) => ({ ...c, [t.id]: "err" }));
@@ -117,7 +138,11 @@ export default function TransferQueue({ onDetach }: { onDetach?: () => void }) {
           {tr("queue.clear")}
         </button>
         {onDetach && (
-          <button className="ghost mini" title={tr("queue.detach")} onClick={onDetach}>
+          <button
+            className="ghost mini"
+            title={tr("queue.detach")}
+            onClick={onDetach}
+          >
             ⧉
           </button>
         )}

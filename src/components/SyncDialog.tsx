@@ -101,7 +101,10 @@ export default function SyncDialog({
                     <span className="sync-arrow">
                       {i.direction === "upload" ? "▲" : "▼"}
                     </span>
-                    <span className="sync-name" title={`${i.local} ↔ ${i.remote}`}>
+                    <span
+                      className="sync-name"
+                      title={`${i.local} ↔ ${i.remote}`}
+                    >
                       {i.name}
                     </span>
                     <span className="muted">{t(REASON_KEY[i.reason])}</span>

@@ -1,15 +1,24 @@
-import { useEffect, useState } from "react";
-import { api, onQueueUpdate, onTransferProgress } from "./api";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useEffect } from "react";
+import {
+  api,
+  emitFileSaved,
+  onFileSaved,
+  onQueueUpdate,
+  onTransferProgress,
+} from "./api";
 import EditorModal, { type EditorTarget } from "./components/EditorModal";
 import FilePane from "./components/FilePane";
 import TransferQueue from "./components/TransferQueue";
 import { useT } from "./i18n";
 import { useStore } from "./state/store";
+import { openEditorWindow } from "./windows";
 
 /**
  * Standalone renderer for a detached window. It talks to the same Rust backend
  * (connections/queue are shared app-wide), so a detached pane browses the live
- * connection and a detached queue mirrors every transfer.
+ * connection and a detached queue mirrors every transfer. A "editor" window
+ * hosts one file; opening a file from anywhere spawns its own such window.
  */
 export default function Detached({
   view,
@@ -23,11 +32,19 @@ export default function Detached({
   const setStatus = useStore((s) => s.setStatus);
   const setTransfers = useStore((s) => s.setTransfers);
   const updateProgress = useStore((s) => s.updateProgress);
-  const [editor, setEditor] = useState<EditorTarget | null>(null);
+  const bumpLocal = useStore((s) => s.bumpLocal);
+  const bumpRemote = useStore((s) => s.bumpRemote);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  // A detached pane refreshes when a file is saved in any editor window.
+  useEffect(() => {
+    if (view !== "local" && view !== "remote") return;
+    const u = onFileSaved((isLocal) => (isLocal ? bumpLocal() : bumpRemote()));
+    return () => void u.then((f) => f());
+  }, [view, bumpLocal, bumpRemote]);
 
   useEffect(() => {
     if (view !== "queue") return;
@@ -47,6 +64,25 @@ export default function Detached({
     );
   }
 
+  if (view === "editor") {
+    const target: EditorTarget = {
+      isLocal: params.get("isLocal") === "1",
+      connectionId: params.get("connectionId") ?? undefined,
+      path: params.get("path") ?? "",
+      name: params.get("name") ?? "",
+    };
+    return (
+      <div className="detached detached-editor">
+        <EditorModal
+          {...target}
+          windowed
+          onClose={() => void getCurrentWebviewWindow().close()}
+          onSaved={(isLocal) => emitFileSaved(isLocal)}
+        />
+      </div>
+    );
+  }
+
   if (view === "local" || view === "remote") {
     return (
       <div className="detached detached-pane">
@@ -61,16 +97,9 @@ export default function Detached({
           connectionId={params.get("connectionId") ?? undefined}
           onStatus={setStatus}
           onTransferFiles={() => {}}
-          onOpenFile={setEditor}
+          onOpenFile={openEditorWindow}
           detached
         />
-        {editor && (
-          <EditorModal
-            {...editor}
-            onClose={() => setEditor(null)}
-            onSaved={() => {}}
-          />
-        )}
       </div>
     );
   }

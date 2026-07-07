@@ -114,7 +114,8 @@ const de: Dict = {
   "sync.reasonNew": "neu",
   "sync.reasonNewer": "neuer",
   "sync.reasonSize": "Größe ≠",
-  "sync.hint": "Es werden keine Dateien gelöscht — nur fehlende bzw. neuere kopiert.",
+  "sync.hint":
+    "Es werden keine Dateien gelöscht — nur fehlende bzw. neuere kopiert.",
   "sync.close": "Schließen",
   "sync.analyze": "Analysieren",
   "sync.analyzing": "Analysiere …",
@@ -131,7 +132,8 @@ const de: Dict = {
     "Dies kann auf einen Man-in-the-Middle-Angriff hindeuten. Nur fortfahren, wenn die Änderung erwartet wird.",
   "hostkey.keyType": "Schlüsseltyp",
   "hostkey.fingerprint": "Fingerprint",
-  "hostkey.hint": "Bei Bestätigung wird der Schlüssel in ~/.ssh/known_hosts gespeichert.",
+  "hostkey.hint":
+    "Bei Bestätigung wird der Schlüssel in ~/.ssh/known_hosts gespeichert.",
   "hostkey.cancel": "Abbrechen",
   "hostkey.trust": "Vertrauen & verbinden",
 
@@ -374,7 +376,10 @@ export function translate(
   return s;
 }
 
-export type TFn = (key: string, params?: Record<string, string | number>) => string;
+export type TFn = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
 
 /** Hook returning a translation function bound to the current language. */
 export function useT(): TFn {

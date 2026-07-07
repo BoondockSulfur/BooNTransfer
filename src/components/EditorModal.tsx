@@ -14,6 +14,8 @@ export interface EditorTarget {
 interface Props extends EditorTarget {
   onClose: () => void;
   onSaved: (isLocal: boolean) => void;
+  /** Render as a full standalone window instead of a floating modal. */
+  windowed?: boolean;
 }
 
 export default function EditorModal({
@@ -23,6 +25,7 @@ export default function EditorModal({
   name,
   onClose,
   onSaved,
+  windowed = false,
 }: Props) {
   const t = useT();
   const drag = useDraggable();
@@ -72,6 +75,11 @@ export default function EditorModal({
   };
   const dialogRef = useDialog(close);
 
+  // In a standalone window, put the cursor straight into the text.
+  useEffect(() => {
+    if (windowed && !loading && !error) areaRef.current?.focus();
+  }, [windowed, loading, error]);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
       e.preventDefault();
@@ -91,6 +99,70 @@ export default function EditorModal({
     }
   };
 
+  const body = (
+    <>
+      <div
+        className={`editor-head${windowed ? "" : " modal-drag"}`}
+        {...(windowed ? {} : drag.handleProps)}
+      >
+        <span className="editor-title" title={path}>
+          ✎ {name}
+          {dirty ? " •" : ""}
+        </span>
+        <span className="editor-loc muted">
+          {isLocal
+            ? t("editor.local")
+            : t("editor.remote", { id: connectionId ?? "" })}
+        </span>
+      </div>
+
+      {error && <div className="editor-error">⚠ {error}</div>}
+
+      <textarea
+        ref={areaRef}
+        className="editor-area mono"
+        value={content}
+        spellCheck={false}
+        disabled={loading || !!error}
+        onChange={(e) => setContent(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={loading ? t("editor.loading") : ""}
+      />
+
+      <div className="form-actions">
+        <span className="muted">
+          {loading
+            ? t("editor.loading")
+            : t("editor.lines", { n: content.split("\n").length })}
+        </span>
+        <span className="spacer" />
+        <button className="ghost" onClick={close}>
+          {t("editor.close")}
+        </button>
+        <button
+          onClick={() => void save()}
+          disabled={saving || loading || !dirty}
+        >
+          {saving ? t("editor.saving") : t("editor.save")}
+        </button>
+        <button
+          className="primary"
+          disabled={saving || loading}
+          onClick={async () => {
+            await save();
+            onClose();
+          }}
+        >
+          {t("editor.saveClose")}
+        </button>
+      </div>
+    </>
+  );
+
+  if (windowed) {
+    return <div className="editor editor-window">{body}</div>;
+  }
+
   return (
     <div className="modal-backdrop" onClick={close}>
       <div
@@ -103,55 +175,7 @@ export default function EditorModal({
         style={drag.style}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="editor-head modal-drag" {...drag.handleProps}>
-          <span className="editor-title" title={path}>
-            ✎ {name}
-            {dirty ? " •" : ""}
-          </span>
-          <span className="editor-loc muted">
-            {isLocal
-              ? t("editor.local")
-              : t("editor.remote", { id: connectionId ?? "" })}
-          </span>
-        </div>
-
-        {error && <div className="editor-error">⚠ {error}</div>}
-
-        <textarea
-          ref={areaRef}
-          className="editor-area mono"
-          value={content}
-          spellCheck={false}
-          disabled={loading || !!error}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={loading ? t("editor.loading") : ""}
-        />
-
-        <div className="form-actions">
-          <span className="muted">
-            {loading
-              ? t("editor.loading")
-              : t("editor.lines", { n: content.split("\n").length })}
-          </span>
-          <span className="spacer" />
-          <button className="ghost" onClick={close}>
-            {t("editor.close")}
-          </button>
-          <button onClick={() => void save()} disabled={saving || loading || !dirty}>
-            {saving ? t("editor.saving") : t("editor.save")}
-          </button>
-          <button
-            className="primary"
-            disabled={saving || loading}
-            onClick={async () => {
-              await save();
-              onClose();
-            }}
-          >
-            {t("editor.saveClose")}
-          </button>
-        </div>
+        {body}
       </div>
     </div>
   );

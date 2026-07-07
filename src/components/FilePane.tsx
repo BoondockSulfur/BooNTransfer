@@ -41,7 +41,11 @@ interface Props {
   onStatus: (text: string, kind?: "info" | "error" | "success") => void;
   // destDir is set on drag-and-drop (the drop target); omitted for menu/keyboard
   // transfers, where App uses the opposite pane's current directory.
-  onTransferFiles: (source: PaneKind, paths: string[], destDir?: string) => void;
+  onTransferFiles: (
+    source: PaneKind,
+    paths: string[],
+    destDir?: string,
+  ) => void;
   /** Opens this pane in its own OS window (hidden when already detached). */
   onDetach?: () => void;
   /** True when rendered inside a detached window (transfers are disabled). */
@@ -74,7 +78,11 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   const [error, setError] = useState<string>();
   const [editing, setEditing] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [menu, setMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null);
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    entry: FileEntry;
+  } | null>(null);
 
   const hist = useRef<{ stack: string[]; idx: number }>({ stack: [], idx: -1 });
   const pathRef = useRef(path);
@@ -321,13 +329,11 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   const SortHead = ({ label, k }: { label: string; k: SortKey }) => (
     <th
       className="sortable"
-      aria-sort={sortKey === k ? (sortAsc ? "ascending" : "descending") : "none"}
+      aria-sort={
+        sortKey === k ? (sortAsc ? "ascending" : "descending") : "none"
+      }
     >
-      <button
-        type="button"
-        className="sort-btn"
-        onClick={() => toggleSort(k)}
-      >
+      <button type="button" className="sort-btn" onClick={() => toggleSort(k)}>
         {label}
         {sortKey === k ? (sortAsc ? " ▲" : " ▼") : ""}
       </button>
@@ -353,13 +359,21 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
           <button title={t("pane.back")} onClick={goBack} disabled={disabled}>
             ◀
           </button>
-          <button title={t("pane.forward")} onClick={goForward} disabled={disabled}>
+          <button
+            title={t("pane.forward")}
+            onClick={goForward}
+            disabled={disabled}
+          >
             ▶
           </button>
           <button title={t("pane.up")} onClick={goUp} disabled={disabled}>
             ↑
           </button>
-          <button title={t("pane.refresh")} onClick={() => load(path)} disabled={disabled}>
+          <button
+            title={t("pane.refresh")}
+            onClick={() => load(path)}
+            disabled={disabled}
+          >
             ⟳
           </button>
           <button
@@ -370,7 +384,11 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
           >
             ⦿
           </button>
-          <button title={t("pane.newFolder")} onClick={doNewFolder} disabled={disabled}>
+          <button
+            title={t("pane.newFolder")}
+            onClick={doNewFolder}
+            disabled={disabled}
+          >
             ＋
           </button>
           {props.onDetach && (

@@ -870,6 +870,16 @@ select option {
   flex: 1;
   min-height: 0;
 }
+/* editor rendered as its own window: fill it, drop the modal chrome */
+.detached-editor .editor {
+  width: 100%;
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+.detached-editor .editor-head {
+  border-radius: 0;
+}
 
 /* directory sync dialog */
 .sync {

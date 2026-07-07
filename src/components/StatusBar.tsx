@@ -23,7 +23,8 @@ export default function StatusBar() {
       <span className="spacer" />
       {running.length > 0 && (
         <span className="xfer-summary">
-          ⇅ {running.length} · {formatSize(doneBytes)} / {formatSize(totalBytes)}
+          ⇅ {running.length} · {formatSize(doneBytes)} /{" "}
+          {formatSize(totalBytes)}
         </span>
       )}
     </footer>

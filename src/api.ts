@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   ConnectResult,
   FileEntry,
@@ -87,8 +87,11 @@ export const api = {
       remoteDir,
       direction,
     }),
-  readText: (connectionId: string | undefined, path: string, isLocal: boolean) =>
-    invoke<string>("read_text", { connectionId, path, isLocal }),
+  readText: (
+    connectionId: string | undefined,
+    path: string,
+    isLocal: boolean,
+  ) => invoke<string>("read_text", { connectionId, path, isLocal }),
   writeText: (
     connectionId: string | undefined,
     path: string,
@@ -124,5 +127,18 @@ export function onTransferProgress(
 ): Promise<UnlistenFn> {
   return listen<[string, number]>("transfer-progress", (e) =>
     cb(e.payload[0], e.payload[1]),
+  );
+}
+
+/** Broadcast that a file was saved, so other windows can refresh their panes. */
+export function emitFileSaved(isLocal: boolean): void {
+  void emit("boon:file-saved", { isLocal });
+}
+
+export function onFileSaved(
+  cb: (isLocal: boolean) => void,
+): Promise<UnlistenFn> {
+  return listen<{ isLocal: boolean }>("boon:file-saved", (e) =>
+    cb(e.payload.isLocal),
   );
 }
