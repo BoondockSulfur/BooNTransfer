@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Pure-Rust crypto (russh/rustls) — no OpenSSL or libssh2 system deps.
+      # The packages below are only for the Tauri GUI/webview layer.
       - name: Install Tauri system dependencies
         run: |
           sudo apt-get update
@@ -41,9 +43,9 @@ jobs:
       - name: Format check
         run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
       - name: Clippy
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
       - name: Tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
   bundle:
     needs: [frontend, backend]
@@ -70,7 +72,7 @@ jobs:
         run: npm run tauri build
       - uses: actions/upload-artifact@v4
         with:
-          name: linuxscp-bundles
+          name: boon-transfer-bundles
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/rpm/*.rpm
