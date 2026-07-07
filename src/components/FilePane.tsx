@@ -497,11 +497,9 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
           <li onClick={() => openEntry(menu.entry)}>
             {menu.entry.isDir ? t("menu.open") : t("menu.openEditor")}
           </li>
-          {!props.detached && (
-            <li onClick={() => props.onTransferFiles(kind, selectedPaths())}>
-              {isRemote ? t("menu.download") : t("menu.upload")}
-            </li>
-          )}
+          <li onClick={() => props.onTransferFiles(kind, selectedPaths())}>
+            {isRemote ? t("menu.download") : t("menu.upload")}
+          </li>
           <li onClick={() => doRename(menu.entry)}>{t("menu.rename")}</li>
           <li onClick={() => doChmod(menu.entry)}>{t("menu.chmod")}</li>
           <li className="danger" onClick={() => doDelete()}>

@@ -172,3 +172,20 @@ export function onTerminalExit(
 ): Promise<UnlistenFn> {
   return listen(`terminal-exit:${terminalId}`, () => cb());
 }
+
+export interface TransferRequest {
+  source: "local" | "remote";
+  connectionId: string | null;
+  paths: string[];
+}
+
+/** A detached pane asks the main window to run a transfer for its selection. */
+export function emitTransferRequest(req: TransferRequest): void {
+  void emit("boon:transfer-request", req);
+}
+
+export function onTransferRequest(
+  cb: (req: TransferRequest) => void,
+): Promise<UnlistenFn> {
+  return listen<TransferRequest>("boon:transfer-request", (e) => cb(e.payload));
+}

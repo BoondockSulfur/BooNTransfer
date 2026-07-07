@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import {
   api,
   emitFileSaved,
+  emitTransferRequest,
   onFileSaved,
   onQueueUpdate,
   onTransferProgress,
@@ -105,7 +106,13 @@ export default function Detached({
           rootPath={params.get("path") ?? undefined}
           connectionId={params.get("connectionId") ?? undefined}
           onStatus={setStatus}
-          onTransferFiles={() => {}}
+          onTransferFiles={(source, paths) =>
+            emitTransferRequest({
+              source,
+              connectionId: params.get("connectionId"),
+              paths,
+            })
+          }
           onTerminal={
             view === "remote"
               ? () => {

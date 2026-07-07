@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { api, onFileSaved, onQueueUpdate, onTransferProgress } from "./api";
+import {
+  api,
+  onFileSaved,
+  onQueueUpdate,
+  onTransferProgress,
+  onTransferRequest,
+} from "./api";
 import { useT } from "./i18n";
 import { checkForUpdate, installPendingUpdate } from "./updater";
 import ConflictDialog from "./components/ConflictDialog";
@@ -315,6 +321,16 @@ export default function App() {
       setStatus(isAppError(e) ? e.message : String(e), "error");
     }
   };
+
+  // Detached windows run transfers through the main window (shared backend).
+  const handleTransferRef = useRef(handleTransfer);
+  handleTransferRef.current = handleTransfer;
+  useEffect(() => {
+    const u = onTransferRequest((req) =>
+      handleTransferRef.current(req.source, req.paths),
+    );
+    return () => void u.then((f) => f());
+  }, []);
 
   const remoteRoot = activeTab?.remoteRoot;
 
