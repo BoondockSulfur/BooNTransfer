@@ -134,12 +134,17 @@ Frontend (React/TS)  ──invoke()──▶  Tauri Commands (async)
   gesetzt. Weitere Sprachen: einfach Dictionary ergänzen.
 - **Barrierefreiheit:** Tastatur-Vollbedienung (teils vorhanden), ARIA-Rollen,
   Fokus-Reihenfolge, Kontraste (WCAG AA) in beiden Themes prüfen.
-- **Packaging:** `.deb`/`.rpm`/AppImage (haben wir) **+ Flatpak** (für breite
-  Distro-Reichweite; Flatpak-Manifest, Secret-Service-Portal beachten).
-- **Signierung & Updates:** AppImage/Flatpak signieren; optional Tauri-Updater
-  mit signierten Releases. Für BooN-OS ggf. ins Distro-Repo statt Selbst-Update.
-- **Branding:** eigener Name + Icon für BooN-OS (Kandidaten: „BooN Transfer",
-  „BooNSCP", „Boon Files"). Lizenz festlegen (Vorschlag **MIT oder Apache-2.0**).
+- **Packaging:** `.deb`/`.rpm`/AppImage (haben wir); **Flatpak-Manifest + .desktop
+  + AppStream-Metainfo** ✅ angelegt in `packaging/` (desktop-file-validate &
+  appstreamcli grün). ⚠ Flatpak-**Build** selbst noch nicht mit flatpak-builder
+  verifiziert (Runtime-Version/Keyring-Portal auf echtem Build prüfen).
+- **Signierung & Updates:** offen — AppImage/Flatpak signieren; für BooN-OS ggf.
+  ins Distro-Repo statt Selbst-Update.
+- **Branding/Lizenz:** ✅ Name **BooN Transfer**, App-ID `os.boon.transfer`,
+  Binary `boon-transfer`, **Lizenz MIT** (LICENSE + Cargo/package.json).
+  **Eigenes Icon** ✅ am BooN-OS-Brand-Kit orientiert (dunkle Kachel +
+  Marken-Gradient Türkis→Blau, Motiv ⇅-Transferpfeile); Quelle
+  `packaging/icon/boon-transfer.svg`, Satz via `tauri icon` generiert.
 - **Doku:** README + kurze Nutzer-Hilfe (in-App „?"), Manpage optional.
 - **Telemetrie:** keine (bewusst) — passt zu Distro-Ethos.
 

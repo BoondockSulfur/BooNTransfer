@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="BooN Transfer">
+  <defs>
+    <!-- Dark BooN app-icon tile -->
+    <linearGradient id="boonBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2528"/>
+      <stop offset="1" stop-color="#101416"/>
+    </linearGradient>
+    <!-- BooN brand gradient (teal -> blue), bottom-left to top-right -->
+    <linearGradient id="boonMark" x1="64" y1="192" x2="192" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22C99A"/>
+      <stop offset="0.55" stop-color="#2F9FD8"/>
+      <stop offset="1" stop-color="#4A9EFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#boonBg)" stroke="#2A3938" stroke-width="2"/>
+
+  <!-- Transfer glyph: two opposing arrows (down / up) in the brand gradient -->
+  <g fill="url(#boonMark)" stroke="url(#boonMark)" stroke-width="8" stroke-linejoin="round">
+    <!-- left arrow: pointing down -->
+    <rect x="84" y="64" width="26" height="80" rx="13" stroke="none"/>
+    <path d="M68 140 L126 140 L97 196 Z"/>
+    <!-- right arrow: pointing up -->
+    <rect x="146" y="112" width="26" height="80" rx="13" stroke="none"/>
+    <path d="M130 116 L188 116 L159 60 Z"/>
+  </g>
+</svg>
