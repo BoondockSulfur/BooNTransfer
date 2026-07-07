@@ -23,6 +23,8 @@ const EMPTY: SessionInfo = {
   folder: "",
   remoteDir: "",
   localDir: "",
+  bucket: "",
+  region: "",
 };
 
 export default function ConnectionManager({ onClose, onConnect }: Props) {
@@ -68,7 +70,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
   const defaultPort = (proto: Protocol): number => {
     if (proto === "ftp" || proto === "ftps") return 21;
     if (proto === "webdav") return 80;
-    if (proto === "webdavs") return 443;
+    if (proto === "webdavs" || proto === "s3") return 443;
     return 22;
   };
 
@@ -231,6 +233,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
                 <option value="ftps">FTPS</option>
                 <option value="webdav">WebDAV</option>
                 <option value="webdavs">WebDAVS</option>
+                <option value="s3">S3</option>
               </select>
             </label>
           </div>
@@ -308,6 +311,28 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
           </div>
           {(form.protocol === "webdav" || form.protocol === "webdavs") && (
             <p className="hint">{t("conn.webdavPath")}</p>
+          )}
+          {form.protocol === "s3" && (
+            <>
+              <div className="row">
+                <label className="grow">
+                  {t("conn.bucket")}
+                  <input
+                    value={form.bucket ?? ""}
+                    onChange={(e) => upd("bucket", e.target.value)}
+                  />
+                </label>
+                <label className="grow">
+                  {t("conn.region")}
+                  <input
+                    value={form.region ?? ""}
+                    placeholder="us-east-1"
+                    onChange={(e) => upd("region", e.target.value)}
+                  />
+                </label>
+              </div>
+              <p className="hint">{t("conn.s3Hint")}</p>
+            </>
           )}
 
           <div className="form-actions">

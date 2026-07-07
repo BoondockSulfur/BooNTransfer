@@ -18,6 +18,7 @@ pub enum Protocol {
     Ftps,
     Webdav,
     Webdavs,
+    S3,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -48,6 +49,11 @@ pub struct SessionInfo {
     pub remote_dir: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_dir: Option<String>,
+    /// S3 only: bucket name and region.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bucket: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
     /// Unix timestamp (seconds) of last successful use; drives "recent".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_used: Option<i64>,
@@ -144,6 +150,8 @@ mod tests {
             folder: None,
             remote_dir: None,
             local_dir: None,
+            bucket: None,
+            region: None,
             last_used: None,
         }
     }

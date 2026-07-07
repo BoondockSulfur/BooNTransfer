@@ -1,4 +1,5 @@
-export type Protocol = "sftp" | "scp" | "ftp" | "ftps" | "webdav" | "webdavs";
+export type Protocol =
+  "sftp" | "scp" | "ftp" | "ftps" | "webdav" | "webdavs" | "s3";
 export type AuthType = "password" | "key" | "agent";
 
 export interface FileEntry {
@@ -24,6 +25,8 @@ export interface SessionInfo {
   folder?: string | null;
   remoteDir?: string | null;
   localDir?: string | null;
+  bucket?: string | null;
+  region?: string | null;
   lastUsed?: number | null;
 }
 

@@ -82,6 +82,10 @@ const de: Dict = {
   "conn.remoteStart": "Remote-Startordner",
   "conn.webdavPath":
     "Bei WebDAV der Basis-Pfad, z. B. /remote.php/dav/files/NUTZER/",
+  "conn.bucket": "Bucket",
+  "conn.region": "Region",
+  "conn.s3Hint":
+    "S3: Host = Endpoint, Benutzer = Access Key, Passwort = Secret Key. Port 443 = HTTPS, sonst HTTP (z. B. MinIO :9000).",
   "conn.folder": "Ordner/Favorit",
   "conn.homePlaceholder": "(Home)",
   "conn.unchanged": "unverändert lassen = leer",
@@ -262,6 +266,10 @@ const en: Dict = {
   "conn.remoteStart": "Remote start folder",
   "conn.webdavPath":
     "For WebDAV, the base path, e.g. /remote.php/dav/files/USER/",
+  "conn.bucket": "Bucket",
+  "conn.region": "Region",
+  "conn.s3Hint":
+    "S3: host = endpoint, user = access key, password = secret key. Port 443 = HTTPS, otherwise HTTP (e.g. MinIO :9000).",
   "conn.folder": "Folder/favourite",
   "conn.homePlaceholder": "(home)",
   "conn.unchanged": "leave empty = unchanged",

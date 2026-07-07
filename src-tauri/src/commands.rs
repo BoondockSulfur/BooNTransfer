@@ -2,6 +2,7 @@
 
 use crate::error::{AppError, Result};
 use crate::protocol::ftp::FtpProvider;
+use crate::protocol::s3::S3Provider;
 use crate::protocol::sftp::{AuthMethod, ConnectParams, SftpProvider};
 use crate::protocol::webdav::WebdavProvider;
 use crate::protocol::{self, local::LocalProvider, FileEntry, FileProvider};
@@ -226,6 +227,25 @@ pub async fn connect(
                 &pass,
                 sess.protocol == Protocol::Webdavs,
                 &root,
+            )
+            .await?;
+            remote_dir = None;
+            Arc::new(provider)
+        }
+        Protocol::S3 => {
+            let secret = secret(&session_id, secrets::KIND_PASSWORD)
+                .await?
+                .unwrap_or_default();
+            let bucket = sess.bucket.clone().unwrap_or_default();
+            let region = sess.region.clone().unwrap_or_default();
+            let provider = S3Provider::connect(
+                &sess.host,
+                sess.port,
+                &sess.username,
+                &secret,
+                sess.port == 443, // https on 443, plain http otherwise (e.g. MinIO :9000)
+                &bucket,
+                &region,
             )
             .await?;
             remote_dir = None;
