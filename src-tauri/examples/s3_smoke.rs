@@ -19,7 +19,10 @@ async fn main() {
         .await
         .expect("connect");
     println!("✓ connect (bucket={bucket})");
-    println!("  list / = {} entries", p.list_dir("/").await.expect("list").len());
+    println!(
+        "  list / = {} entries",
+        p.list_dir("/").await.expect("list").len()
+    );
 
     p.make_dir("/boon-dir").await.expect("mkdir");
     println!("✓ mkdir /boon-dir");
@@ -36,7 +39,10 @@ async fn main() {
     println!("✓ upload {} bytes", data.len());
 
     let st = p.stat(remote).await.expect("stat");
-    println!("✓ stat: name={} size={} dir={}", st.name, st.size, st.is_dir);
+    println!(
+        "✓ stat: name={} size={} dir={}",
+        st.name, st.size, st.is_dir
+    );
     println!(
         "  list /boon-dir = {} entries",
         p.list_dir("/boon-dir").await.expect("list").len()
