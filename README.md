@@ -10,24 +10,26 @@ eigenen UI ohne fremde Marken oder Assets. Entwickelt als Bordmittel für
 nutzte). SSH läuft über **russh** (reines Rust, RustCrypto); FTPS-TLS über
 **rustls** (Krypto-Provider `aws-lc-rs` — AWS-LC, nicht OpenSSL).
 
-> **Protokolle:** **SFTP, SCP, FTP, FTPS.** Gespeicherte Sitzungen · Zwei-Pane-
-> Browser · Upload/Download inkl. rekursiver Verzeichnisse · globale Transfer-
-> Warteschlange mit Pause/Fortsetzen/Abbrechen/Wiederholen · Passwörter im
-> System-Keyring (pure Rust) · Host-Key-Prüfung · Passwort-/Key-/**Agent**-Auth ·
-> Konfliktdialog · Transfer-Resume ab Offset · **SHA-256-Verifikation** ·
-> **Verzeichnis-Synchronisierung** · **eingebauter Texteditor** · **Tabs** ·
-> abdockbare Fenster · **Deutsch/Englisch** · Hell/Dunkel.
+> **Protokolle:** **SFTP, SCP, FTP, FTPS, WebDAV, WebDAVS, S3** (und
+> S3-kompatibel: MinIO, Backblaze …). Gespeicherte Sitzungen · Zwei-Pane-Browser
+> · globale Transfer-Warteschlange mit Pause/Fortsetzen/Abbrechen/Wiederholen ·
+> Passwörter im System-Keyring (pure Rust) · Host-Key-Prüfung ·
+> Passwort-/Key-/**Agent**-Auth · Konfliktdialog · Transfer-Resume ·
+> **SHA-256-Verifikation** · **Verzeichnis-Synchronisierung** · **eingebautes
+> SSH-Terminal** · **Editor in eigenen Fenstern** · **Tabs** · abdockbare Fenster
+> · **signierte Self-Updates** · **Deutsch/Englisch** · Hell/Dunkel.
 
 ### Protokoll-Fähigkeiten
 
-| Fähigkeit | SFTP | SCP | FTP / FTPS |
-|---|:--:|:--:|:--:|
-| Browsen, mkdir, rm, rename | ✅ | ✅ (via SFTP) | ✅ |
-| Rechte anzeigen/ändern (chmod) | ✅ | ✅ | ⚠ nur `SITE CHMOD` |
-| Besitzer/Zeitstempel | ✅ | ✅ | teilweise |
-| Transfer-Resume | ✅ | ❌ | ✅ (REST) |
-| Gepipelinete Transfers (schnell bei Latenz) | ✅ | ✅ | — |
-| SHA-256-Verifikation | ✅ (`sha256sum`) | ✅ | ❌ |
+| Fähigkeit | SFTP | SCP | FTP / FTPS | WebDAV | S3 |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Browsen, mkdir, rm, rename | ✅ | ✅ (via SFTP) | ✅ | ✅ | ✅¹ |
+| Rechte anzeigen/ändern (chmod) | ✅ | ✅ | ⚠ nur `SITE CHMOD` | ❌ | ❌ |
+| Transfer-Resume | ✅ | ❌ | ✅ (REST) | ❌ | ❌ |
+| Gepipelinete Transfers (schnell bei Latenz) | ✅ | ✅ | — | — | — |
+| SHA-256-Verifikation | ✅ (`sha256sum`) | ✅ | ❌ | ❌ | ❌ |
+
+¹ S3 kennt keine echten Ordner (Präfixe + `name/`-Marker); Umbenennen = Copy+Delete.
 
 SFTP-Transfers sind **gepipelinet** (viele gleichzeitige Read/Write-Requests) —
 das gleicht Latenz aus und hält mit libssh2-basierten Clients mit bzw. übertrifft
@@ -44,6 +46,9 @@ Byte-Übertragung über das SCP-Protokoll.
 | Core | **Rust (async, tokio)** | Speichersicherheit, echtes Multithreading, abbrechbare Transfers |
 | SSH/SFTP | **russh + russh-sftp** | reines Rust (RustCrypto), kein libssh2/OpenSSL; selbst gebautes Request-Pipelining |
 | FTP/FTPS | **suppaftp + rustls** | TLS via rustls (`aws-lc-rs`, kein OpenSSL) mit Zertifikatsprüfung (Mozilla-Roots) |
+| WebDAV | **reqwest (rustls) + quick-xml** | PROPFIND/MKCOL/DELETE/MOVE/GET/PUT über HTTP(S) |
+| S3 | **rusty-s3 + reqwest** | SigV4-Presign, S3-kompatibel (AWS/MinIO/Backblaze) |
+| Terminal | **russh-PTY + xterm.js** | interaktive SSH-Shell in eigenem Fenster |
 | Secrets | **keyring** → Secret Service (zbus) | Passwörter/Passphrasen nie im Klartext |
 | UI | **React + TypeScript + Vite** | modernes, HiDPI-fähiges Design; Dark/Light; i18n |
 | State | **zustand** | schlanker Store für Verbindung, Transfers, Theme, Sprache |
@@ -228,15 +233,14 @@ gegen den eingebetteten Public Key verifiziert, bevor er angewandt wird.
 
 ## Roadmap
 
-1. Eingebautes SSH-Terminal.
-2. WebDAV- und S3-kompatibler Provider.
-3. Flatpak-Build für den BooN-OS-Repo verifizieren.
-4. Cross-Window-Drag-and-Drop zwischen abgedockten Fenstern.
+- S3-Multipart-Uploads (aktuell werden Uploads gepuffert).
+- WebDAV-/S3-Uploads streamen (kein RAM-Puffer).
 
-Erledigt: russh-Kern mit Pipelining · SFTP/SCP/FTP/FTPS · Agent-Auth ·
-Konfliktdialog · Resume · SHA-256 · Verzeichnis-Sync · eingebauter Editor · Tabs
-· abdockbare Fenster · i18n (de/en) · Barrierefreiheit · MIT-Lizenz · Packaging ·
-**signierte Self-Updates**.
+Erledigt: russh-Kern mit Pipelining · **SFTP/SCP/FTP/FTPS/WebDAV/S3** ·
+Agent-Auth · **eingebautes SSH-Terminal** · Konfliktdialog · Resume · SHA-256 ·
+Verzeichnis-Sync · **Editor in eigenen Fenstern** · fensterübergreifende
+Übertragung · Tabs · abdockbare Fenster · i18n (de/en) · Barrierefreiheit ·
+MIT-Lizenz · Packaging (deb/rpm/appimage/Flatpak) · **signierte Self-Updates**.
 
 ## Lizenz
 
