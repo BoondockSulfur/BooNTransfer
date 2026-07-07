@@ -52,16 +52,18 @@
 | | heute (v1) | v2 (russh) |
 |---|---|---|
 | SSH | libssh2 (C) | russh (Rust) |
-| Krypto | gevendorte OpenSSL (C-Build) | ring/aws-lc-rs (Rust + geprüftes asm) |
+| Krypto | gevendorte OpenSSL (C-Build) | SSH: RustCrypto (pure) · TLS: aws-lc-rs (kein OpenSSL) |
 | FTPS-TLS | native-tls → OpenSSL | rustls (Rust) |
 | SFTP-Durchsatz bei Latenz | round-trip-gebunden | gepipelint |
 | Lizenz-Fußabdruck | + OpenSSL-Lizenz | Apache-2.0/MIT, kein OpenSSL |
 | Build | langsam (OpenSSL/libssh2 aus Quelle) | schneller, reproduzierbarer |
 
-> Nuance zur „pure Rust": Der Krypto-Backend von russh nutzt `ring` (Rust +
-> Assembler) bzw. `aws-lc-rs` (etwas geprüftes C). **Entscheidend:** kein
-> System-`libssh2`/`openssl` mehr, kein OpenSSL-Quellbuild. Backend-Wahl als
-> Feature-Flag festlegen (Ziel: `ring` für maximale Rust-Reinheit).
+> **GEKLÄRT (cargo tree geprüft):** SSH über **russh ist echtes reines Rust**
+> (RustCrypto, weder `ring` noch `aws-lc-rs` im Baum). Nur **rustls** (FTPS-TLS)
+> zieht `aws-lc-rs` (AWS-LC, etwas geprüftes C — **nicht** OpenSSL). `ring` wäre
+> ebenfalls C/asm → kein Gewinn; `aws-lc-rs` (auditiert, FIPS-Track) bleibt
+> bewusst. **Entscheidend & ehrlich dokumentiert:** kein System-`libssh2`/
+> `openssl`, kein OpenSSL-Quellbuild.
 
 ## 2. Was bleibt, was wird neu
 
@@ -202,7 +204,7 @@ Stream-Bindings). Der Rest fügte sich sauber (Compile lief im ersten Anlauf).
 | russh-API-Feinheiten (Host-Key/Agent) | Gegen Compiler + echten sshd iterieren (wie bei ssh2 bewährt) |
 | Async-Umbau der Queue (Pause/Cancel) | select!-Muster früh isoliert testen |
 | Flatpak + Keyring (Secret-Service-Portal) | Portal-Zugriff im Manifest testen; Fallback dokumentieren |
-| „pure Rust" überverkauft (aws-lc-rs) | Krypto-Backend `ring` wählen, ehrlich dokumentieren |
+| „pure Rust" überverkauft (aws-lc-rs) | ✅ geklärt: SSH=RustCrypto (pure), TLS=rustls/aws-lc-rs (kein OpenSSL) — ehrlich im README |
 
 ## 8. Offene Entscheidungen (für dich)
 

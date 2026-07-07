@@ -6,8 +6,9 @@ Dateisystem, rechts ein entfernter Server. Vertrauter Zwei-Fenster-Workflow
 eigenen UI ohne fremde Marken oder Assets. Entwickelt als Bordmittel für
 **[BooN-OS](https://github.com/BoondockSulfur)**.
 
-Der SSH-/TLS-Stack ist **reines Rust** (russh + rustls) — kein libssh2, kein
-OpenSSL.
+**Kein libssh2, kein OpenSSL** (anders als v1, das libssh2 + vendored OpenSSL
+nutzte). SSH läuft über **russh** (reines Rust, RustCrypto); FTPS-TLS über
+**rustls** (Krypto-Provider `aws-lc-rs` — AWS-LC, nicht OpenSSL).
 
 > **Protokolle:** **SFTP, SCP, FTP, FTPS.** Gespeicherte Sitzungen · Zwei-Pane-
 > Browser · Upload/Download inkl. rekursiver Verzeichnisse · globale Transfer-
@@ -41,8 +42,8 @@ Byte-Übertragung über das SCP-Protokoll.
 |---|---|---|
 | Shell/Packaging | **Tauri 2** | winzige Bundles, natives `.deb`/`.rpm`/AppImage/Flatpak, hartes Trust-Boundary UI↔Core |
 | Core | **Rust (async, tokio)** | Speichersicherheit, echtes Multithreading, abbrechbare Transfers |
-| SSH/SFTP | **russh + russh-sftp** | reines Rust, kein libssh2/OpenSSL; selbst gebautes Request-Pipelining |
-| FTP/FTPS | **suppaftp + rustls** | reines Rust, TLS mit Zertifikatsprüfung (Mozilla-Roots) |
+| SSH/SFTP | **russh + russh-sftp** | reines Rust (RustCrypto), kein libssh2/OpenSSL; selbst gebautes Request-Pipelining |
+| FTP/FTPS | **suppaftp + rustls** | TLS via rustls (`aws-lc-rs`, kein OpenSSL) mit Zertifikatsprüfung (Mozilla-Roots) |
 | Secrets | **keyring** → Secret Service (zbus) | Passwörter/Passphrasen nie im Klartext |
 | UI | **React + TypeScript + Vite** | modernes, HiDPI-fähiges Design; Dark/Light; i18n |
 | State | **zustand** | schlanker Store für Verbindung, Transfers, Theme, Sprache |
@@ -171,9 +172,10 @@ Fehler), Tests (`--locked`) und optionaler Bundle-Build mit Artefakt-Upload.
 
 ## Sicherheitskonzept
 
-- **Reines-Rust-Krypto.** SSH über **russh**, TLS über **rustls** — kein
-  OpenSSL/libssh2. Moderne Default-Algorithmen; FTPS validiert Server-Zertifikate
-  gegen die Mozilla-Roots.
+- **Kein OpenSSL/libssh2.** SSH über **russh** (reines Rust, RustCrypto), FTPS
+  über **rustls** mit dem gut auditierten `aws-lc-rs`-Provider (AWS-LC, nicht
+  OpenSSL). Moderne Default-Algorithmen; FTPS validiert Server-Zertifikate gegen
+  die Mozilla-Roots.
 - **Keine Klartext-Secrets.** Passwörter und Key-Passphrasen liegen im
   System-Keyring (Secret Service), referenziert über `<session-id>:<kind>`. Die
   Sitzungs-JSON (`~/.config/boon-transfer/sessions.json`) enthält ausschließlich
