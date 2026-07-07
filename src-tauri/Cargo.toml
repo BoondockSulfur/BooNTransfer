@@ -1,0 +1,57 @@
+[package]
+name = "linuxscp-client"
+version = "0.1.0"
+description = "LinuxSCP Client — Dual-Pane SFTP/SCP file transfer client"
+authors = ["BoondockSulfur"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "linuxscp_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
+dirs = "5"
+base64 = "0.22"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-util = "0.7"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+
+# Watches temp files opened in an external editor to auto re-upload on save.
+notify = "6"
+
+# SFTP/SCP over SSH. libssh2 + openssl are vendored (built from source) so the
+# resulting binaries do not depend on distro-specific system libraries.
+ssh2 = { version = "0.9", features = ["vendored-openssl"] }
+
+# FTP / FTPS. native-tls shares the vendored OpenSSL pulled in by ssh2.
+suppaftp = { version = "6", features = ["native-tls"] }
+native-tls = "0.2"
+
+# Secure credential storage via the freedesktop Secret Service. The
+# async-secret-service backend is pure Rust (zbus) — no libdbus/libsecret build
+# dependency, so bundles stay portable across distros. All keyring calls are made
+# from spawn_blocking (its sync facade must not run inside the async runtime).
+keyring = { version = "3", features = ["async-secret-service", "tokio", "crypto-rust"] }
+
+[features]
+# Default Tauri feature that enables custom protocol on the frontend build.
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
