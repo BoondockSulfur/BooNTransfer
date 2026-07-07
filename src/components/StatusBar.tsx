@@ -1,7 +1,9 @@
+import { useT } from "../i18n";
 import { useStore } from "../state/store";
 import { formatSize } from "../util";
 
 export default function StatusBar() {
+  const t = useT();
   const status = useStore((s) => s.status);
   const connection = useStore((s) => s.connection);
   const transfers = useStore((s) => s.transfers);
@@ -13,9 +15,11 @@ export default function StatusBar() {
   return (
     <footer className="statusbar">
       <span className={`conn-indicator ${connection ? "on" : "off"}`}>
-        {connection ? "● verbunden" : "○ getrennt"}
+        {connection ? t("statusbar.on") : t("statusbar.off")}
       </span>
-      <span className={`status-msg ${status.kind}`}>{status.text}</span>
+      <span className={`status-msg ${status.kind}`}>
+        {status.text || t("status.notConnected")}
+      </span>
       <span className="spacer" />
       {running.length > 0 && (
         <span className="xfer-summary">

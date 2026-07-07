@@ -1,4 +1,5 @@
 import { useDraggable } from "../hooks";
+import { useT } from "../i18n";
 
 interface Props {
   host: string;
@@ -17,6 +18,7 @@ export default function HostKeyDialog({
   onAccept,
   onReject,
 }: Props) {
+  const t = useT();
   const drag = useDraggable();
   return (
     <div className="modal-backdrop">
@@ -25,39 +27,29 @@ export default function HostKeyDialog({
           className={`modal-drag ${changed ? "warn" : ""}`}
           {...drag.handleProps}
         >
-          {changed ? "⚠ Host-Key HAT SICH GEÄNDERT" : "Unbekannter Host-Key"}
+          {changed ? t("hostkey.changed") : t("hostkey.unknown")}
         </h2>
         <p>
-          Der Server <strong>{host}</strong> präsentiert einen{" "}
-          {changed ? "anderen als den gespeicherten" : "bisher unbekannten"}{" "}
-          Host-Key.
+          {t("hostkey.presents", {
+            host,
+            kind: changed ? t("hostkey.kindChanged") : t("hostkey.kindUnknown"),
+          })}
         </p>
-        {changed && (
-          <p className="danger">
-            Dies kann auf einen Man-in-the-Middle-Angriff hindeuten. Nur
-            fortfahren, wenn die Änderung erwartet wird.
-          </p>
-        )}
+        {changed && <p className="danger">{t("hostkey.warn")}</p>}
         <dl className="kv">
-          <dt>Schlüsseltyp</dt>
+          <dt>{t("hostkey.keyType")}</dt>
           <dd className="mono">{keyType}</dd>
-          <dt>Fingerprint</dt>
+          <dt>{t("hostkey.fingerprint")}</dt>
           <dd className="mono break">{fingerprint}</dd>
         </dl>
-        <p className="hint">
-          Bei Bestätigung wird der Schlüssel in <code>~/.ssh/known_hosts</code>{" "}
-          gespeichert.
-        </p>
+        <p className="hint">{t("hostkey.hint")}</p>
         <div className="form-actions">
           <button className="ghost" onClick={onReject}>
-            Abbrechen
+            {t("hostkey.cancel")}
           </button>
           <span className="spacer" />
-          <button
-            className={changed ? "danger" : "primary"}
-            onClick={onAccept}
-          >
-            Vertrauen &amp; verbinden
+          <button className={changed ? "danger" : "primary"} onClick={onAccept}>
+            {t("hostkey.trust")}
           </button>
         </div>
       </div>

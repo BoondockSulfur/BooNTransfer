@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useDraggable } from "../hooks";
+import { useT } from "../i18n";
 import { api } from "../api";
 import { useStore } from "../state/store";
 import type { AuthType, Protocol, SessionInfo } from "../types";
@@ -25,6 +26,7 @@ const EMPTY: SessionInfo = {
 };
 
 export default function ConnectionManager({ onClose, onConnect }: Props) {
+  const t = useT();
   const sessions = useStore((s) => s.sessions);
   const setSessions = useStore((s) => s.setSessions);
   const setStatus = useStore((s) => s.setStatus);
@@ -74,7 +76,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
 
   const save = async (): Promise<string | null> => {
     if (!form.name.trim() || !form.host.trim() || !form.username.trim()) {
-      setStatus("Name, Host und Benutzer sind erforderlich", "error");
+      setStatus(t("conn.errRequired"), "error");
       return null;
     }
     setSaving(true);
@@ -86,7 +88,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
       );
       await reload();
       setForm((f) => ({ ...f, id }));
-      setStatus("Sitzung gespeichert", "success");
+      setStatus(t("conn.saved"), "success");
       return id;
     } catch (e) {
       setStatus(isAppError(e) ? e.message : String(e), "error");
@@ -97,7 +99,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Sitzung löschen?")) return;
+    if (!window.confirm(t("conn.confirmDelete"))) return;
     await api.deleteSession(id);
     await reload();
     if (form.id === id) setForm({ ...EMPTY });
@@ -121,19 +123,19 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-drag conn-titlebar" {...drag.handleProps}>
-          <span>⇅ Verbindungen</span>
+          <span>{t("conn.title")}</span>
         </div>
         <div className="conn-list">
           <div className="conn-list-head">
             <input
               className="search"
-              placeholder="Suchen …"
+              placeholder={t("conn.search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             <button
               className="ghost"
-              title="Neue Sitzung"
+              title={t("conn.newSession")}
               onClick={() => edit({ ...EMPTY })}
             >
               ＋
@@ -154,7 +156,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
                 {s.folder ? <span className="tag">{s.folder}</span> : null}
                 <button
                   className="mini danger"
-                  title="Löschen"
+                  title={t("conn.delete")}
                   onClick={(e) => {
                     e.stopPropagation();
                     void remove(s.id);
@@ -165,15 +167,15 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="muted">Keine gespeicherten Sitzungen</li>
+              <li className="muted">{t("conn.noSessions")}</li>
             )}
           </ul>
         </div>
 
         <div className="conn-form">
-          <h2>{form.id ? "Sitzung bearbeiten" : "Neue Sitzung"}</h2>
+          <h2>{form.id ? t("conn.editSession") : t("conn.newSession")}</h2>
           <label>
-            Name
+            {t("conn.name")}
             <input
               value={form.name}
               onChange={(e) => upd("name", e.target.value)}
@@ -181,14 +183,14 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
           </label>
           <div className="row">
             <label className="grow">
-              Host
+              {t("conn.host")}
               <input
                 value={form.host}
                 onChange={(e) => upd("host", e.target.value)}
               />
             </label>
             <label className="port">
-              Port
+              {t("conn.port")}
               <input
                 type="number"
                 value={form.port}
@@ -198,14 +200,14 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
           </div>
           <div className="row">
             <label className="grow">
-              Benutzer
+              {t("conn.user")}
               <input
                 value={form.username}
                 onChange={(e) => upd("username", e.target.value)}
               />
             </label>
             <label>
-              Protokoll
+              {t("conn.protocol")}
               <select
                 value={form.protocol}
                 onChange={(e) => onProtocol(e.target.value as Protocol)}
@@ -219,25 +221,25 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
           </div>
 
           <label>
-            Authentifizierung
+            {t("conn.auth")}
             <select
               value={form.authType}
               disabled={isFtp}
               onChange={(e) => upd("authType", e.target.value as AuthType)}
             >
-              <option value="password">Passwort</option>
-              {!isFtp && <option value="key">SSH-Schlüsseldatei</option>}
-              {!isFtp && <option value="agent">SSH-Agent</option>}
+              <option value="password">{t("conn.authPassword")}</option>
+              {!isFtp && <option value="key">{t("conn.authKey")}</option>}
+              {!isFtp && <option value="agent">{t("conn.authAgent")}</option>}
             </select>
           </label>
 
           {form.authType === "password" && (
             <label>
-              Passwort
+              {t("conn.password")}
               <input
                 type="password"
                 autoComplete="new-password"
-                placeholder={form.id ? "unverändert lassen = leer" : ""}
+                placeholder={form.id ? t("conn.unchanged") : ""}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -246,7 +248,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
           {form.authType === "key" && (
             <>
               <label>
-                Schlüsseldatei
+                {t("conn.keyFile")}
                 <input
                   value={form.keyPath ?? ""}
                   placeholder="~/.ssh/id_ed25519"
@@ -254,7 +256,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
                 />
               </label>
               <label>
-                Passphrase
+                {t("conn.passphrase")}
                 <input
                   type="password"
                   autoComplete="new-password"
@@ -265,20 +267,20 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
             </>
           )}
           {form.authType === "agent" && (
-            <p className="hint">Verwendet Schlüssel aus dem laufenden SSH-Agent.</p>
+            <p className="hint">{t("conn.agentHint")}</p>
           )}
 
           <div className="row">
             <label className="grow">
-              Remote-Startordner
+              {t("conn.remoteStart")}
               <input
                 value={form.remoteDir ?? ""}
-                placeholder="(Home)"
+                placeholder={t("conn.homePlaceholder")}
                 onChange={(e) => upd("remoteDir", e.target.value)}
               />
             </label>
             <label className="grow">
-              Ordner/Favorit
+              {t("conn.folder")}
               <input
                 value={form.folder ?? ""}
                 onChange={(e) => upd("folder", e.target.value)}
@@ -288,19 +290,19 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
 
           <div className="form-actions">
             <button className="ghost" onClick={onClose}>
-              Schließen
+              {t("conn.close")}
             </button>
             <span className="spacer" />
             {form.id && (
               <button className="danger ghost" onClick={() => remove(form.id)}>
-                Löschen
+                {t("conn.delete")}
               </button>
             )}
             <button onClick={() => void save()} disabled={saving}>
-              Speichern
+              {t("conn.save")}
             </button>
             <button className="primary" onClick={() => void connect()}>
-              Verbinden
+              {t("conn.connect")}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDraggable } from "../hooks";
+import { useT } from "../i18n";
 import type { SyncDirection, SyncItem } from "../types";
 import { formatSize } from "../util";
 
@@ -11,16 +12,11 @@ interface Props {
   onClose: () => void;
 }
 
-const DIRECTIONS: { key: SyncDirection; label: string }[] = [
-  { key: "upload", label: "Lokal → Remote" },
-  { key: "download", label: "Remote → Lokal" },
-  { key: "both", label: "Beide (neuere gewinnt)" },
-];
-
-const REASON: Record<SyncItem["reason"], string> = {
-  new: "neu",
-  newer: "neuer",
-  size: "Größe ≠",
+const DIRECTIONS: SyncDirection[] = ["upload", "download", "both"];
+const REASON_KEY: Record<SyncItem["reason"], string> = {
+  new: "sync.reasonNew",
+  newer: "sync.reasonNewer",
+  size: "sync.reasonSize",
 };
 
 export default function SyncDialog({
@@ -30,6 +26,7 @@ export default function SyncDialog({
   onRun,
   onClose,
 }: Props) {
+  const t = useT();
   const drag = useDraggable();
   const [direction, setDirection] = useState<SyncDirection>("upload");
   const [items, setItems] = useState<SyncItem[] | null>(null);
@@ -59,7 +56,7 @@ export default function SyncDialog({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal sync" style={drag.style} onClick={(e) => e.stopPropagation()}>
         <h2 className="modal-drag" {...drag.handleProps}>
-          ⇄ Verzeichnisse synchronisieren
+          {t("sync.title")}
         </h2>
         <div className="sync-paths mono">
           <div title={localDir}>📁 {localDir || "—"}</div>
@@ -68,17 +65,17 @@ export default function SyncDialog({
 
         <div className="sync-dir">
           {DIRECTIONS.map((d) => (
-            <label key={d.key}>
+            <label key={d}>
               <input
                 type="radio"
                 name="syncdir"
-                checked={direction === d.key}
+                checked={direction === d}
                 onChange={() => {
-                  setDirection(d.key);
+                  setDirection(d);
                   setItems(null);
                 }}
               />
-              {d.label}
+              {t(`sync.${d}`)}
             </label>
           ))}
         </div>
@@ -86,7 +83,7 @@ export default function SyncDialog({
         {items && (
           <div className="sync-list">
             {items.length === 0 ? (
-              <div className="muted">Bereits synchron — nichts zu tun.</div>
+              <div className="muted">{t("sync.synced")}</div>
             ) : (
               <ul>
                 {items.slice(0, 200).map((i) => (
@@ -97,36 +94,37 @@ export default function SyncDialog({
                     <span className="sync-name" title={`${i.local} ↔ ${i.remote}`}>
                       {i.name}
                     </span>
-                    <span className="muted">{REASON[i.reason]}</span>
+                    <span className="muted">{t(REASON_KEY[i.reason])}</span>
                     <span className="muted">{formatSize(i.size)}</span>
                   </li>
                 ))}
                 {items.length > 200 && (
-                  <li className="muted">… und {items.length - 200} weitere</li>
+                  <li className="muted">
+                    {t("sync.more", { n: items.length - 200 })}
+                  </li>
                 )}
               </ul>
             )}
           </div>
         )}
 
-        <p className="hint">
-          Es werden keine Dateien gelöscht — nur fehlende bzw. neuere kopiert.
-        </p>
+        <p className="hint">{t("sync.hint")}</p>
 
         <div className="form-actions">
           <button className="ghost" onClick={onClose}>
-            Schließen
+            {t("sync.close")}
           </button>
           <span className="spacer" />
           <button onClick={analyze} disabled={busy}>
-            {busy && !items ? "Analysiere …" : "Analysieren"}
+            {busy && !items ? t("sync.analyzing") : t("sync.analyze")}
           </button>
           <button
             className="primary"
             onClick={run}
             disabled={busy || !items || items.length === 0}
           >
-            Übertragen{items && items.length > 0 ? ` (${items.length})` : ""}
+            {t("sync.transfer")}
+            {items && items.length > 0 ? ` (${items.length})` : ""}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { useDraggable } from "../hooks";
+import { useT } from "../i18n";
 import { isAppError } from "../types";
 
 export interface EditorTarget {
@@ -23,6 +24,7 @@ export default function EditorModal({
   onClose,
   onSaved,
 }: Props) {
+  const t = useT();
   const drag = useDraggable();
   const [content, setContent] = useState("");
   const [original, setOriginal] = useState("");
@@ -65,7 +67,7 @@ export default function EditorModal({
   };
 
   const close = () => {
-    if (dirty && !window.confirm("Ungespeicherte Änderungen verwerfen?")) return;
+    if (dirty && !window.confirm(t("editor.discard"))) return;
     onClose();
   };
 
@@ -97,7 +99,9 @@ export default function EditorModal({
             {dirty ? " •" : ""}
           </span>
           <span className="editor-loc muted">
-            {isLocal ? "lokal" : `remote: ${connectionId ?? ""}`}
+            {isLocal
+              ? t("editor.local")
+              : t("editor.remote", { id: connectionId ?? "" })}
           </span>
         </div>
 
@@ -111,19 +115,21 @@ export default function EditorModal({
           disabled={loading || !!error}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={loading ? "Lädt …" : ""}
+          placeholder={loading ? t("editor.loading") : ""}
         />
 
         <div className="form-actions">
           <span className="muted">
-            {loading ? "Lädt …" : `${content.split("\n").length} Zeilen`}
+            {loading
+              ? t("editor.loading")
+              : t("editor.lines", { n: content.split("\n").length })}
           </span>
           <span className="spacer" />
           <button className="ghost" onClick={close}>
-            Schließen
+            {t("editor.close")}
           </button>
           <button onClick={() => void save()} disabled={saving || loading || !dirty}>
-            {saving ? "Speichert …" : "Speichern (Strg+S)"}
+            {saving ? t("editor.saving") : t("editor.save")}
           </button>
           <button
             className="primary"
@@ -133,7 +139,7 @@ export default function EditorModal({
               onClose();
             }}
           >
-            Speichern &amp; Schließen
+            {t("editor.saveClose")}
           </button>
         </div>
       </div>

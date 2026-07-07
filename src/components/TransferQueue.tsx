@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
+import { useT } from "../i18n";
 import { useStore } from "../state/store";
 import type { TransferItem } from "../types";
 import { formatSize } from "../util";
@@ -11,14 +12,6 @@ function pct(t: TransferItem): number {
   return Math.min(100, Math.round((t.transferred / t.size) * 100));
 }
 
-const CHECK_LABEL: Record<CheckState, string> = {
-  pending: "⏳ SHA-256 …",
-  ok: "✓ SHA-256",
-  fail: "✗ SHA-256",
-  na: "SHA-256 n. v.",
-  err: "⚠ SHA-256",
-};
-
 function Row({
   t,
   check,
@@ -28,6 +21,7 @@ function Row({
   check?: CheckState;
   onVerify: (t: TransferItem) => void;
 }) {
+  const tr = useT();
   const p = pct(t);
   return (
     <li className={`queue-row status-${t.status}`}>
@@ -46,37 +40,37 @@ function Row({
       <span className="qstatus">{t.status}</span>
       <span className="qactions">
         {t.status === "running" && (
-          <button title="Pause" onClick={() => api.transferPause(t.id)}>
+          <button title={tr("queue.pause")} onClick={() => api.transferPause(t.id)}>
             ⏸
           </button>
         )}
         {t.status === "paused" && (
-          <button title="Fortsetzen" onClick={() => api.transferResume(t.id)}>
+          <button title={tr("queue.resume")} onClick={() => api.transferResume(t.id)}>
             ▶
           </button>
         )}
         {(t.status === "running" ||
           t.status === "paused" ||
           t.status === "queued") && (
-          <button title="Abbrechen" onClick={() => api.transferCancel(t.id)}>
+          <button title={tr("queue.cancel")} onClick={() => api.transferCancel(t.id)}>
             ✕
           </button>
         )}
         {(t.status === "failed" || t.status === "cancelled") && (
-          <button title="Wiederholen" onClick={() => api.transferRetry(t.id)}>
+          <button title={tr("queue.retry")} onClick={() => api.transferRetry(t.id)}>
             ↻
           </button>
         )}
         {t.status === "completed" && (
           <button
-            title="SHA-256-Prüfsumme lokal ↔ remote vergleichen"
+            title={tr("queue.verify")}
             onClick={() => onVerify(t)}
             disabled={check === "pending"}
           >
             ✓?
           </button>
         )}
-        {check && <span className={`check check-${check}`}>{CHECK_LABEL[check]}</span>}
+        {check && <span className={`check check-${check}`}>{tr(`check.${check}`)}</span>}
       </span>
       {t.error && (
         <span className="qerror" title={t.error}>
@@ -88,6 +82,7 @@ function Row({
 }
 
 export default function TransferQueue({ onDetach }: { onDetach?: () => void }) {
+  const tr = useT();
   const transfers = useStore((s) => s.transfers);
   const setStatus = useStore((s) => s.setStatus);
   const [checks, setChecks] = useState<Record<string, CheckState>>({});
@@ -101,9 +96,9 @@ export default function TransferQueue({ onDetach }: { onDetach?: () => void }) {
       const r = await api.verifyTransfer(t.connectionId, t.localPath, t.remotePath);
       const state: CheckState = !r.supported ? "na" : r.matches ? "ok" : "fail";
       setChecks((c) => ({ ...c, [t.id]: state }));
-      if (state === "fail") setStatus(`SHA-256 stimmt NICHT: ${t.name}`, "error");
-      else if (state === "ok") setStatus(`SHA-256 verifiziert: ${t.name}`, "success");
-      else setStatus(`SHA-256 für ${t.name} nicht verfügbar`);
+      if (state === "fail") setStatus(tr("status.checkFail", { name: t.name }), "error");
+      else if (state === "ok") setStatus(tr("status.checkOk", { name: t.name }), "success");
+      else setStatus(tr("status.checkNa", { name: t.name }));
     } catch (e) {
       setChecks((c) => ({ ...c, [t.id]: "err" }));
       setStatus(String(e), "error");
@@ -113,22 +108,22 @@ export default function TransferQueue({ onDetach }: { onDetach?: () => void }) {
   return (
     <div className="queue">
       <div className="queue-head">
-        <strong>Übertragungen</strong>
+        <strong>{tr("queue.title")}</strong>
         <span className="muted">
-          {active} aktiv · {transfers.length} gesamt
+          {tr("queue.summary", { active, total: transfers.length })}
         </span>
         <span className="spacer" />
         <button className="ghost mini" onClick={() => api.clearFinished()}>
-          Abgeschlossene entfernen
+          {tr("queue.clear")}
         </button>
         {onDetach && (
-          <button className="ghost mini" title="In eigenem Fenster öffnen" onClick={onDetach}>
+          <button className="ghost mini" title={tr("queue.detach")} onClick={onDetach}>
             ⧉
           </button>
         )}
       </div>
       {transfers.length === 0 ? (
-        <div className="queue-empty muted">Keine Übertragungen</div>
+        <div className="queue-empty muted">{tr("queue.empty")}</div>
       ) : (
         <ul className="queue-list">
           {transfers.map((t) => (

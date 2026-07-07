@@ -3,6 +3,7 @@ import { api, onQueueUpdate, onTransferProgress } from "./api";
 import EditorModal, { type EditorTarget } from "./components/EditorModal";
 import FilePane from "./components/FilePane";
 import TransferQueue from "./components/TransferQueue";
+import { useT } from "./i18n";
 import { useStore } from "./state/store";
 
 /**
@@ -17,6 +18,7 @@ export default function Detached({
   view: string;
   params: URLSearchParams;
 }) {
+  const t = useT();
   const theme = useStore((s) => s.theme);
   const setStatus = useStore((s) => s.setStatus);
   const setTransfers = useStore((s) => s.setTransfers);
@@ -52,8 +54,8 @@ export default function Detached({
           kind={view}
           title={
             view === "local"
-              ? "Lokal"
-              : `Remote — ${params.get("connectionId") ?? ""}`
+              ? t("pane.local")
+              : t("pane.remoteWith", { name: params.get("connectionId") ?? "" })
           }
           rootPath={params.get("path") ?? undefined}
           connectionId={params.get("connectionId") ?? undefined}
@@ -73,5 +75,5 @@ export default function Detached({
     );
   }
 
-  return <div className="detached">Unbekannte Ansicht: {view}</div>;
+  return <div className="detached">{view}</div>;
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { detectLang, type Lang } from "../i18n";
 import type { ConnectResult, SessionInfo, TransferItem } from "../types";
 
 export type Theme = "light" | "dark";
@@ -7,6 +8,9 @@ export type StatusKind = "info" | "error" | "success";
 interface AppStore {
   theme: Theme;
   toggleTheme: () => void;
+
+  lang: Lang;
+  setLang: (l: Lang) => void;
 
   sessions: SessionInfo[];
   setSessions: (s: SessionInfo[]) => void;
@@ -45,6 +49,12 @@ export const useStore = create<AppStore>((set) => ({
       return { theme };
     }),
 
+  lang: detectLang(),
+  setLang: (lang) => {
+    localStorage.setItem("boon.lang", lang);
+    set({ lang });
+  },
+
   sessions: [],
   setSessions: (sessions) => set({ sessions }),
 
@@ -53,7 +63,7 @@ export const useStore = create<AppStore>((set) => ({
   setConnection: (connection) => set({ connection }),
   setConnecting: (connecting) => set({ connecting }),
 
-  status: { text: "Nicht verbunden", kind: "info" },
+  status: { text: "", kind: "info" },
   setStatus: (text, kind = "info") => set({ status: { text, kind } }),
 
   transfers: [],

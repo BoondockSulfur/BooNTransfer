@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, onQueueUpdate, onTransferProgress } from "./api";
+import { useT } from "./i18n";
 import ConflictDialog from "./components/ConflictDialog";
 import ConnectionManager from "./components/ConnectionManager";
 import EditorModal, { type EditorTarget } from "./components/EditorModal";
@@ -45,6 +46,9 @@ interface Tab {
 }
 
 export default function App() {
+  const tr = useT();
+  const lang = useStore((s) => s.lang);
+  const setLang = useStore((s) => s.setLang);
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const sessions = useStore((s) => s.sessions);
@@ -101,10 +105,13 @@ export default function App() {
     "row-resize",
   );
 
-  // theme -> DOM
+  // theme + language -> DOM
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   // initial data + event wiring
   useEffect(() => {
@@ -154,7 +161,7 @@ export default function App() {
 
   const doConnect = async (sessionId: string, trust = false) => {
     setConnecting(true);
-    setStatus("Verbinde …");
+    setStatus(tr("status.connecting"));
     try {
       const result = await api.connect(sessionId, trust);
       const session = sessions.find((s) => s.id === sessionId);
@@ -171,7 +178,7 @@ export default function App() {
       setActiveId(result.connectionId);
       setHostKey(null);
       setShowConn(false);
-      setStatus(`Verbunden: ${title}`, "success");
+      setStatus(tr("status.connected", { name: title }), "success");
       setSessions(await api.listSessions());
     } catch (e) {
       if (isAppError(e) && e.kind === "host_key") {
@@ -210,7 +217,7 @@ export default function App() {
     if (activeId === id) {
       setActiveId(remaining.length ? remaining[remaining.length - 1].id : null);
     }
-    setStatus("Verbindung getrennt");
+    setStatus(tr("status.disconnected"));
   };
 
   const enqueueResolved = async (
@@ -232,8 +239,12 @@ export default function App() {
       dest,
       resolved,
     );
-    const verb = direction === "upload" ? "Upload" : "Download";
-    setStatus(`${n} Datei(en) in Warteschlange (${verb} → ${dest})`);
+    setStatus(
+      tr(direction === "upload" ? "status.queuedUp" : "status.queuedDown", {
+        n,
+        dest,
+      }),
+    );
   };
 
   const handleTransfer = async (
@@ -242,7 +253,7 @@ export default function App() {
     destDir?: string,
   ) => {
     if (!connection) {
-      setStatus("Keine Verbindung", "error");
+      setStatus(tr("status.noConnection"), "error");
       return;
     }
     if (paths.length === 0) return;
@@ -261,7 +272,7 @@ export default function App() {
         dest,
       );
       if (planned.length === 0) {
-        setStatus("Keine übertragbaren Dateien in der Auswahl");
+        setStatus(tr("status.noFiles"));
         return;
       }
       if (planned.some((f) => f.exists)) {
@@ -280,7 +291,7 @@ export default function App() {
     openDetached(
       "local",
       { path: localRef.current?.currentDir() ?? localHome ?? "/" },
-      { title: "Lokal — LinuxSCP" },
+      { title: `${tr("pane.local")} — BooN Transfer` },
     );
   const detachRemote = () => {
     if (!connection) return;
@@ -290,12 +301,12 @@ export default function App() {
         connectionId: connection.connectionId,
         path: remoteRef.current?.currentDir() ?? remoteRoot ?? "/",
       },
-      { title: `Remote — ${connection.connectionId}` },
+      { title: tr("pane.remoteWith", { name: connection.connectionId }) },
     );
   };
   const detachQueue = () =>
     openDetached("queue", {}, {
-      title: "Übertragungen — LinuxSCP",
+      title: `${tr("queue.title")} — BooN Transfer`,
       width: 760,
       height: 420,
     });
@@ -347,7 +358,7 @@ export default function App() {
         sync.localDir,
         downloads,
       );
-    setStatus(`${n} Datei(en) synchronisiert → Warteschlange`);
+    setStatus(tr("status.synced", { n }));
   };
 
   return (
@@ -359,12 +370,19 @@ export default function App() {
         </div>
         <div className="topbar-actions">
           <button className="primary" onClick={() => setShowConn(true)}>
-            {connecting ? "Verbinde …" : "＋ Verbindung"}
+            {connecting ? tr("topbar.connecting") : tr("topbar.add")}
           </button>
           <span className="spacer" />
           <button
             className="ghost icon-btn"
-            title="Theme wechseln"
+            title={tr("topbar.lang")}
+            onClick={() => setLang(lang === "de" ? "en" : "de")}
+          >
+            {lang === "de" ? "EN" : "DE"}
+          </button>
+          <button
+            className="ghost icon-btn"
+            title={tr("topbar.theme")}
             onClick={toggleTheme}
           >
             {theme === "dark" ? "☀" : "☾"}
@@ -391,7 +409,7 @@ export default function App() {
               <span className="tab-title">{t.title}</span>
               <button
                 className="tab-close"
-                title="Verbindung schließen"
+                title={tr("tab.close")}
                 onClick={(e) => {
                   e.stopPropagation();
                   void closeTab(t.id);
@@ -403,7 +421,7 @@ export default function App() {
           ))}
           <button
             className="tab-add"
-            title="Neue Verbindung"
+            title={tr("tab.new")}
             onClick={() => setShowConn(true)}
           >
             ＋
@@ -419,7 +437,7 @@ export default function App() {
         <FilePane
           ref={localRef}
           kind="local"
-          title="Lokal"
+          title={tr("pane.local")}
           rootPath={localHome}
           onStatus={setStatus}
           onTransferFiles={handleTransfer}
@@ -430,11 +448,11 @@ export default function App() {
         <div
           className="pane-divider"
           onMouseDown={startPaneDrag}
-          title="Ziehen, um die Panels zu verteilen"
+          title={tr("divider.dragCols")}
         >
           <button
             onMouseDown={(e) => e.stopPropagation()}
-            title="Hochladen (lokal → remote)"
+            title={tr("divider.upload")}
             disabled={!connection}
             onClick={() =>
               handleTransfer("local", localRef.current?.selectedPaths() ?? [])
@@ -444,7 +462,7 @@ export default function App() {
           </button>
           <button
             onMouseDown={(e) => e.stopPropagation()}
-            title="Herunterladen (remote → lokal)"
+            title={tr("divider.download")}
             disabled={!connection}
             onClick={() =>
               handleTransfer("remote", remoteRef.current?.selectedPaths() ?? [])
@@ -454,7 +472,7 @@ export default function App() {
           </button>
           <button
             onMouseDown={(e) => e.stopPropagation()}
-            title="Verzeichnisse synchronisieren"
+            title={tr("divider.sync")}
             disabled={!connection}
             onClick={openSync}
           >
@@ -466,7 +484,11 @@ export default function App() {
           key={activeId ?? "none"}
           ref={remoteRef}
           kind="remote"
-          title={activeTab ? `Remote — ${activeTab.title}` : "Remote"}
+          title={
+            activeTab
+              ? tr("pane.remoteWith", { name: activeTab.title })
+              : tr("pane.remote")
+          }
           rootPath={remoteRoot}
           connectionId={activeId ?? undefined}
           onStatus={setStatus}
@@ -480,7 +502,7 @@ export default function App() {
         <div
           className="row-resize"
           onMouseDown={startQueueDrag}
-          title="Ziehen, um die Höhe zu ändern"
+          title={tr("divider.dragRows")}
         />
         <TransferQueue onDetach={detachQueue} />
       </div>

@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { api } from "../api";
+import { useT } from "../i18n";
 import { useStore } from "../state/store";
 import type { FileEntry } from "../types";
 import { isAppError } from "../types";
@@ -62,6 +63,7 @@ function errMsg(e: unknown): string {
 
 const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   const { kind, connectionId, onStatus } = props;
+  const t = useT();
   const [path, setPath] = useState("");
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -201,7 +203,7 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
       return;
     }
     if (!isEditableFile(entry.name)) {
-      onStatus(`„${entry.name}“ ist keine Textdatei und wird nicht geöffnet`);
+      onStatus(t("pane.notText", { name: entry.name }));
       return;
     }
     props.onOpenFile?.({
@@ -214,7 +216,7 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
 
   // --- actions ---
   const doNewFolder = async () => {
-    const name = window.prompt("Name des neuen Ordners:");
+    const name = window.prompt(t("pane.promptFolder"));
     if (!name) return;
     const target = posixJoin(path, name);
     try {
@@ -229,7 +231,7 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   const doDelete = async () => {
     const names = [...selected];
     if (names.length === 0) return;
-    if (!window.confirm(`${names.length} Element(e) wirklich löschen?`)) return;
+    if (!window.confirm(t("pane.confirmDelete", { n: names.length }))) return;
     for (const name of names) {
       const entry = entries.find((x) => x.name === name);
       const target = posixJoin(path, name);
@@ -245,7 +247,7 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   };
 
   const doRename = async (entry: FileEntry) => {
-    const next = window.prompt("Neuer Name:", entry.name);
+    const next = window.prompt(t("pane.promptRename"), entry.name);
     if (!next || next === entry.name) return;
     const from = posixJoin(path, entry.name);
     const to = posixJoin(path, next);
@@ -260,11 +262,11 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
 
   const doChmod = async (entry: FileEntry) => {
     const current = (entry.permissions ?? 0o644).toString(8).padStart(3, "0");
-    const input = window.prompt("Rechte (oktal, z. B. 644):", current);
+    const input = window.prompt(t("pane.promptChmod"), current);
     if (!input) return;
     const mode = parseInt(input, 8);
     if (Number.isNaN(mode)) {
-      onStatus("Ungültiger Oktalwert", "error");
+      onStatus(t("pane.badOctal"), "error");
       return;
     }
     const target = posixJoin(path, entry.name);
@@ -339,31 +341,31 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
           {props.title}
         </span>
         <div className="pane-tools">
-          <button title="Zurück" onClick={goBack} disabled={disabled}>
+          <button title={t("pane.back")} onClick={goBack} disabled={disabled}>
             ◀
           </button>
-          <button title="Vor" onClick={goForward} disabled={disabled}>
+          <button title={t("pane.forward")} onClick={goForward} disabled={disabled}>
             ▶
           </button>
-          <button title="Übergeordneter Ordner" onClick={goUp} disabled={disabled}>
+          <button title={t("pane.up")} onClick={goUp} disabled={disabled}>
             ↑
           </button>
-          <button title="Aktualisieren" onClick={() => load(path)} disabled={disabled}>
+          <button title={t("pane.refresh")} onClick={() => load(path)} disabled={disabled}>
             ⟳
           </button>
           <button
-            title="Versteckte Dateien"
+            title={t("pane.hidden")}
             className={showHidden ? "active" : ""}
             onClick={() => setShowHidden((v) => !v)}
             disabled={disabled}
           >
             ⦿
           </button>
-          <button title="Neuer Ordner" onClick={doNewFolder} disabled={disabled}>
+          <button title={t("pane.newFolder")} onClick={doNewFolder} disabled={disabled}>
             ＋
           </button>
           {props.onDetach && (
-            <button title="In eigenem Fenster öffnen" onClick={props.onDetach}>
+            <button title={t("pane.detach")} onClick={props.onDetach}>
               ⧉
             </button>
           )}
@@ -397,15 +399,15 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
 
       <div className="pane-body">
         {disabled ? (
-          <div className="pane-empty">Keine Verbindung</div>
+          <div className="pane-empty">{t("pane.noConnection")}</div>
         ) : (
           <table className="file-table">
             <thead>
               <tr>
-                <SortHead label="Name" k="name" />
-                <SortHead label="Größe" k="size" />
-                <SortHead label="Geändert" k="modified" />
-                <SortHead label="Rechte" k="permissions" />
+                <SortHead label={t("col.name")} k="name" />
+                <SortHead label={t("col.size")} k="size" />
+                <SortHead label={t("col.modified")} k="modified" />
+                <SortHead label={t("col.perms")} k="permissions" />
               </tr>
             </thead>
             <tbody>
@@ -442,14 +444,14 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
             </tbody>
           </table>
         )}
-        {loading && <div className="pane-loading">Lädt …</div>}
+        {loading && <div className="pane-loading">{t("pane.loading")}</div>}
         {error && <div className="pane-error">⚠ {error}</div>}
       </div>
 
       <footer className="pane-foot">
         {selected.size > 0
-          ? `${selected.size} ausgewählt`
-          : `${visible.length} Element(e)`}
+          ? t("pane.selected", { n: selected.size })
+          : t("pane.count", { n: visible.length })}
       </footer>
 
       {menu && (
@@ -459,17 +461,17 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
           onClick={() => setMenu(null)}
         >
           <li onClick={() => openEntry(menu.entry)}>
-            {menu.entry.isDir ? "Öffnen" : "Im Editor öffnen ✎"}
+            {menu.entry.isDir ? t("menu.open") : t("menu.openEditor")}
           </li>
           {!props.detached && (
             <li onClick={() => props.onTransferFiles(kind, selectedPaths())}>
-              {isRemote ? "Herunterladen ▽" : "Hochladen △"}
+              {isRemote ? t("menu.download") : t("menu.upload")}
             </li>
           )}
-          <li onClick={() => doRename(menu.entry)}>Umbenennen (F2)</li>
-          <li onClick={() => doChmod(menu.entry)}>Rechte ändern …</li>
+          <li onClick={() => doRename(menu.entry)}>{t("menu.rename")}</li>
+          <li onClick={() => doChmod(menu.entry)}>{t("menu.chmod")}</li>
           <li className="danger" onClick={() => doDelete()}>
-            Löschen (Entf)
+            {t("menu.delete")}
           </li>
         </ul>
       )}
