@@ -26,6 +26,9 @@ jobs:
       # The packages below are only for the Tauri GUI/webview layer.
       - name: Install Tauri system dependencies
         run: |
+          # The Azure-hosted runners ship Microsoft apt repos whose signature
+          # intermittently breaks apt-get update — drop them; we don't need them.
+          sudo rm -f /etc/apt/sources.list.d/microsoft* /etc/apt/sources.list.d/azure* || true
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
