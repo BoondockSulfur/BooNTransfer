@@ -52,7 +52,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1NzY1OTc2OEY4QzlCMDEKUldRQm00eVBkbGwySlI4ZUI5UzZ5L05FWTVJVFZnaDlSUzF6SnRnQzhFTkszbGlpWUhOa3pUWlIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFGOEU2QjJDNDBGQzVGOUUKUldTZVgveEFMR3VPcjI0WklCVHZ5ZFVsN1BqeitwUmxvbXF5dlpkWHFTQWFZMUdiYW0vVm92RHoK",
       "endpoints": [
         "https://github.com/BoondockSulfur/BooNTransfer/releases/latest/download/latest.json"
       ]
