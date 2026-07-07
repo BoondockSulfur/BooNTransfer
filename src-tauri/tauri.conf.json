@@ -39,8 +39,14 @@
     "shortDescription": "Dual-pane SFTP/SCP/FTP/FTPS file transfer client",
     "longDescription": "BooN Transfer is a dual-pane file transfer client for SFTP, SCP, FTP and FTPS with saved sessions, a background transfer queue with pause/resume, directory synchronisation, a built-in editor, and secure credential storage via the system keyring. Built on russh and rustls (pure Rust, no OpenSSL).",
     "linux": {
-      "deb": { "depends": [] },
-      "rpm": { "depends": [] }
+      "deb": {
+        "depends": [],
+        "desktopTemplate": "../packaging/linux/boon-transfer.desktop.hbs"
+      },
+      "rpm": {
+        "depends": [],
+        "desktopTemplate": "../packaging/linux/boon-transfer.desktop.hbs"
+      }
     }
   }
 }
