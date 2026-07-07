@@ -8,8 +8,9 @@
 #   npm run tauri build                       # produces the .deb
 #   cp "src-tauri/target/release/bundle/deb/BooN Transfer_0.1.0_amd64.deb" \
 #      packaging/flatpak/boon-transfer.deb
-#   flatpak-builder --user --install --force-clean build-dir \
-#      packaging/flatpak/os.boon.transfer.yml
+#   flatpak-builder --user --install --force-clean \
+#      --state-dir "$HOME/.cache/boon-transfer-flatpak" \
+#      /tmp/boon-transfer-flatpak-build packaging/flatpak/os.boon.transfer.yml
 #
 # NOTE: not yet verified with flatpak-builder in this repo — treat runtime
 # version and finish-args as a reviewed starting point, confirm on a real build.
