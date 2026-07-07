@@ -1,4 +1,4 @@
-import { useDraggable } from "../hooks";
+import { useDialog, useDraggable } from "../hooks";
 import { useT } from "../i18n";
 
 interface Props {
@@ -20,9 +20,18 @@ export default function HostKeyDialog({
 }: Props) {
   const t = useT();
   const drag = useDraggable();
+  const dialogRef = useDialog(onReject);
   return (
     <div className="modal-backdrop">
-      <div className="modal hostkey" style={drag.style}>
+      <div
+        ref={dialogRef}
+        className="modal hostkey"
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={changed ? t("hostkey.changed") : t("hostkey.unknown")}
+        tabIndex={-1}
+        style={drag.style}
+      >
         <h2
           className={`modal-drag ${changed ? "warn" : ""}`}
           {...drag.handleProps}

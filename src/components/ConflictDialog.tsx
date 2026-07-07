@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useDraggable } from "../hooks";
+import { useDialog, useDraggable } from "../hooks";
 import { useT } from "../i18n";
 import type { ConflictPolicy, PlannedFile } from "../types";
 import { formatSize } from "../util";
@@ -23,11 +23,17 @@ export default function ConflictDialog({
   const conflicts = useMemo(() => files.filter((f) => f.exists), [files]);
   const anyResumable = conflicts.some((f) => f.destSize < f.size);
   const drag = useDraggable();
+  const dialogRef = useDialog(onCancel);
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div
+        ref={dialogRef}
         className="modal conflict"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("conflict.title")}
+        tabIndex={-1}
         style={drag.style}
         onClick={(e) => e.stopPropagation()}
       >

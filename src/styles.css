@@ -72,6 +72,24 @@ button:disabled {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Visible keyboard focus (both themes); mouse users are unaffected. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button:focus-visible,
+.tab:focus-visible,
+.file-table tbody tr:focus-visible,
+.conn-list li:focus-visible,
+.context-menu li:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* Programmatic focus on a dialog container should not draw a ring. */
+.modal:focus {
+  outline: none;
+}
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -336,6 +354,18 @@ select option {
   user-select: none;
 }
 .file-table th.sortable {
+  cursor: pointer;
+  padding: 0;
+}
+.sort-btn {
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 6px 10px;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
 }
 .file-table td {

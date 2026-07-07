@@ -129,8 +129,9 @@ Frontend (React/TS)  ──invoke()──▶  Tauri Commands (async)
 
 ## 4. Distro- & Public-Release-Themen (neu ggü. v1)
 
-- **i18n:** UI aktuell Deutsch hartkodiert → **Sprachdateien** (de/en mind.),
-  einfache i18n-Lib oder eigenes Dictionary. Systemsprache erkennen.
+- **i18n:** ✅ ERLEDIGT — de/en über `src/i18n.ts` (eigenes Dictionary +
+  `useT()`-Hook), Systemsprache-Erkennung + Umschalter in der Topbar, `<html lang>`
+  gesetzt. Weitere Sprachen: einfach Dictionary ergänzen.
 - **Barrierefreiheit:** Tastatur-Vollbedienung (teils vorhanden), ARIA-Rollen,
   Fokus-Reihenfolge, Kontraste (WCAG AA) in beiden Themes prüfen.
 - **Packaging:** `.deb`/`.rpm`/AppImage (haben wir) **+ Flatpak** (für breite

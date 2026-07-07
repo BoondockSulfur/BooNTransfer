@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDraggable } from "../hooks";
+import { useDialog, useDraggable } from "../hooks";
 import { useT } from "../i18n";
 import type { SyncDirection, SyncItem } from "../types";
 import { formatSize } from "../util";
@@ -28,6 +28,7 @@ export default function SyncDialog({
 }: Props) {
   const t = useT();
   const drag = useDraggable();
+  const dialogRef = useDialog(onClose);
   const [direction, setDirection] = useState<SyncDirection>("upload");
   const [items, setItems] = useState<SyncItem[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,7 +55,16 @@ export default function SyncDialog({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal sync" style={drag.style} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className="modal sync"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("sync.title")}
+        tabIndex={-1}
+        style={drag.style}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="modal-drag" {...drag.handleProps}>
           {t("sync.title")}
         </h2>

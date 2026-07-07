@@ -319,9 +319,18 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   };
 
   const SortHead = ({ label, k }: { label: string; k: SortKey }) => (
-    <th onClick={() => toggleSort(k)} className="sortable">
-      {label}
-      {sortKey === k ? (sortAsc ? " ▲" : " ▼") : ""}
+    <th
+      className="sortable"
+      aria-sort={sortKey === k ? (sortAsc ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        className="sort-btn"
+        onClick={() => toggleSort(k)}
+      >
+        {label}
+        {sortKey === k ? (sortAsc ? " ▲" : " ▼") : ""}
+      </button>
     </th>
   );
 

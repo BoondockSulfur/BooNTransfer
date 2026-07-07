@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { useDraggable } from "../hooks";
+import { useDialog, useDraggable } from "../hooks";
 import { useT } from "../i18n";
 import { isAppError } from "../types";
 
@@ -70,6 +70,7 @@ export default function EditorModal({
     if (dirty && !window.confirm(t("editor.discard"))) return;
     onClose();
   };
+  const dialogRef = useDialog(close);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -92,7 +93,16 @@ export default function EditorModal({
 
   return (
     <div className="modal-backdrop" onClick={close}>
-      <div className="modal editor" style={drag.style} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className="modal editor"
+        role="dialog"
+        aria-modal="true"
+        aria-label={name}
+        tabIndex={-1}
+        style={drag.style}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="editor-head modal-drag" {...drag.handleProps}>
           <span className="editor-title" title={path}>
             ✎ {name}

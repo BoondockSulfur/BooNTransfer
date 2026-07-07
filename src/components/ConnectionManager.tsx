@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useDraggable } from "../hooks";
+import { useDialog, useDraggable } from "../hooks";
 import { useT } from "../i18n";
 import { api } from "../api";
 import { useStore } from "../state/store";
@@ -37,6 +37,7 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
   const [passphrase, setPassphrase] = useState("");
   const [saving, setSaving] = useState(false);
   const drag = useDraggable();
+  const dialogRef = useDialog(onClose);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -118,7 +119,12 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={dialogRef}
         className="modal conn-manager"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("conn.title")}
+        tabIndex={-1}
         style={drag.style}
         onClick={(e) => e.stopPropagation()}
       >

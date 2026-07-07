@@ -1,4 +1,29 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+/**
+ * Accessibility helper for modal dialogs: focuses the dialog on open and closes
+ * it on Escape. Returns a ref to attach to the dialog container (give it
+ * `role="dialog" aria-modal="true"` and an accessible label).
+ */
+export function useDialog(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Keep the latest handler without re-running the mount effect (which would
+  // steal focus back to the container on every render).
+  const cb = useRef(onClose);
+  cb.current = onClose;
+  useEffect(() => {
+    ref.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        cb.current();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  return ref;
+}
 
 /** Window-level mouse-drag helper that reports cumulative delta from the start. */
 function beginDrag(onMove: (dx: number, dy: number) => void, cursor?: string) {
