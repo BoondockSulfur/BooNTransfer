@@ -16,6 +16,8 @@ pub enum Protocol {
     Scp,
     Ftp,
     Ftps,
+    Webdav,
+    Webdavs,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

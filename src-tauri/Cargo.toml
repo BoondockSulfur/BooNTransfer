@@ -55,6 +55,12 @@ futures = "0.3"
 # and tokio_util::compat.
 suppaftp = { version = "6", features = ["async-rustls"] }
 
+# WebDAV — HTTP(S) via reqwest (rustls, no OpenSSL) + quick-xml for PROPFIND.
+# Both are already in the tree (updater / tauri-utils); declared directly here.
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "stream"] }
+quick-xml = "0.41"
+percent-encoding = "2"
+
 # Secure credential storage via the freedesktop Secret Service. The
 # async-secret-service backend is pure Rust (zbus) — no libdbus/libsecret build
 # dependency, so bundles stay portable across distros. All keyring calls are made

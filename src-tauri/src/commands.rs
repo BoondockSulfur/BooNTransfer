@@ -3,6 +3,7 @@
 use crate::error::{AppError, Result};
 use crate::protocol::ftp::FtpProvider;
 use crate::protocol::sftp::{AuthMethod, ConnectParams, SftpProvider};
+use crate::protocol::webdav::WebdavProvider;
 use crate::protocol::{self, local::LocalProvider, FileEntry, FileProvider};
 use crate::session::{AuthType, Protocol, SessionInfo};
 use crate::transfer::{Direction, TransferItem};
@@ -164,7 +165,7 @@ pub async fn connect(
         .ok_or_else(|| AppError::other("session not found"))?;
 
     let trust = trust_host_key.unwrap_or(false);
-    let remote_dir = sess.remote_dir.clone();
+    let mut remote_dir = sess.remote_dir.clone();
     let local_dir = sess.local_dir.clone();
 
     let provider: Arc<dyn FileProvider> = match sess.protocol {
@@ -210,6 +211,25 @@ pub async fn connect(
                 )
                 .await?,
             )
+        }
+        Protocol::Webdav | Protocol::Webdavs => {
+            let pass = secret(&session_id, secrets::KIND_PASSWORD)
+                .await?
+                .unwrap_or_default();
+            // The "remote start folder" doubles as the WebDAV base path; it is
+            // baked into the provider, so the pane itself opens at "/".
+            let root = sess.remote_dir.clone().unwrap_or_default();
+            let provider = WebdavProvider::connect(
+                &sess.host,
+                sess.port,
+                &sess.username,
+                &pass,
+                sess.protocol == Protocol::Webdavs,
+                &root,
+            )
+            .await?;
+            remote_dir = None;
+            Arc::new(provider)
         }
     };
 

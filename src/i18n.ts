@@ -80,6 +80,8 @@ const de: Dict = {
   "conn.keyFile": "Schlüsseldatei",
   "conn.agentHint": "Verwendet Schlüssel aus dem laufenden SSH-Agent.",
   "conn.remoteStart": "Remote-Startordner",
+  "conn.webdavPath":
+    "Bei WebDAV der Basis-Pfad, z. B. /remote.php/dav/files/NUTZER/",
   "conn.folder": "Ordner/Favorit",
   "conn.homePlaceholder": "(Home)",
   "conn.unchanged": "unverändert lassen = leer",
@@ -258,6 +260,8 @@ const en: Dict = {
   "conn.keyFile": "Key file",
   "conn.agentHint": "Uses keys from the running SSH agent.",
   "conn.remoteStart": "Remote start folder",
+  "conn.webdavPath":
+    "For WebDAV, the base path, e.g. /remote.php/dav/files/USER/",
   "conn.folder": "Folder/favourite",
   "conn.homePlaceholder": "(home)",
   "conn.unchanged": "leave empty = unchanged",

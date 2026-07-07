@@ -62,16 +62,23 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
   const upd = <K extends keyof SessionInfo>(k: K, v: SessionInfo[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const isFtp = form.protocol === "ftp" || form.protocol === "ftps";
+  // FTP and WebDAV authenticate with a password only (no SSH key/agent).
+  const passwordOnly = form.protocol !== "sftp" && form.protocol !== "scp";
+
+  const defaultPort = (proto: Protocol): number => {
+    if (proto === "ftp" || proto === "ftps") return 21;
+    if (proto === "webdav") return 80;
+    if (proto === "webdavs") return 443;
+    return 22;
+  };
 
   const onProtocol = (proto: Protocol) => {
-    const ftp = proto === "ftp" || proto === "ftps";
+    const pwOnly = proto !== "sftp" && proto !== "scp";
     setForm((f) => ({
       ...f,
       protocol: proto,
-      port: ftp ? 21 : 22,
-      // SSH key/agent auth doesn't apply to FTP.
-      authType: ftp ? "password" : f.authType,
+      port: defaultPort(proto),
+      authType: pwOnly ? "password" : f.authType,
     }));
   };
 
@@ -222,6 +229,8 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
                 <option value="scp">SCP</option>
                 <option value="ftp">FTP</option>
                 <option value="ftps">FTPS</option>
+                <option value="webdav">WebDAV</option>
+                <option value="webdavs">WebDAVS</option>
               </select>
             </label>
           </div>
@@ -230,12 +239,16 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
             {t("conn.auth")}
             <select
               value={form.authType}
-              disabled={isFtp}
+              disabled={passwordOnly}
               onChange={(e) => upd("authType", e.target.value as AuthType)}
             >
               <option value="password">{t("conn.authPassword")}</option>
-              {!isFtp && <option value="key">{t("conn.authKey")}</option>}
-              {!isFtp && <option value="agent">{t("conn.authAgent")}</option>}
+              {!passwordOnly && (
+                <option value="key">{t("conn.authKey")}</option>
+              )}
+              {!passwordOnly && (
+                <option value="agent">{t("conn.authAgent")}</option>
+              )}
             </select>
           </label>
 
@@ -293,6 +306,9 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
               />
             </label>
           </div>
+          {(form.protocol === "webdav" || form.protocol === "webdavs") && (
+            <p className="hint">{t("conn.webdavPath")}</p>
+          )}
 
           <div className="form-actions">
             <button className="ghost" onClick={onClose}>

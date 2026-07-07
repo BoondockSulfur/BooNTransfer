@@ -1,4 +1,4 @@
-export type Protocol = "sftp" | "scp" | "ftp" | "ftps";
+export type Protocol = "sftp" | "scp" | "ftp" | "ftps" | "webdav" | "webdavs";
 export type AuthType = "password" | "key" | "agent";
 
 export interface FileEntry {
