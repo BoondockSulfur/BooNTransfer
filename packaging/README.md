@@ -14,11 +14,18 @@ License: **MIT**. Binary: **`boon-transfer`**.
 
 ## deb / rpm / AppImage
 
-`npm run tauri build` generates these. Tauri writes its own `.desktop` from the
-config, but ship `os.boon.transfer.metainfo.xml` into
-`/usr/share/metainfo/` so software centres show the app properly. The
-`os.boon.transfer.desktop` here is the canonical source if you want to override
-Tauri's generated one.
+`npm run tauri build` generates these (verified: all three build; binary
+`/usr/bin/boon-transfer`, brand icon in hicolor). The installed `.desktop` comes
+from [`linux/boon-transfer.desktop.hbs`](linux/boon-transfer.desktop.hbs) (wired
+via `bundle.linux.{deb,rpm}.desktopTemplate`) so it lands under **Network /
+FileTransfer** with search keywords.
+
+Tauri names that file `BooN Transfer.desktop` (after the product name). AppStream
+metainfo integration for the traditional packages is therefore left to the
+Flatpak (below), where the desktop id is the reverse-DNS `os.boon.transfer`. To
+ship the metainfo in the deb/rpm too, install `os.boon.transfer.metainfo.xml`
+into `/usr/share/metainfo/` and set its `<launchable>` to `BooN Transfer.desktop`
+to match.
 
 ## Flatpak
 
