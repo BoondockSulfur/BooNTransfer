@@ -19,3 +19,9 @@ src-tauri/gen/
 
 # experiment build artifacts
 experiments/*/target/
+
+# Flatpak build artefacts (inputs/outputs, not source)
+/.flatpak-builder/
+packaging/flatpak/build-dir/
+packaging/flatpak/boon-transfer.deb
+packaging/flatpak/.flatpak-builder/

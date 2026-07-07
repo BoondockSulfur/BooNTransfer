@@ -15,7 +15,7 @@
 # version and finish-args as a reviewed starting point, confirm on a real build.
 id: os.boon.transfer
 runtime: org.gnome.Platform
-runtime-version: '47'
+runtime-version: '49'
 sdk: org.gnome.Sdk
 command: boon-transfer
 
@@ -46,11 +46,12 @@ modules:
       - install -Dm644 os.boon.transfer.desktop /app/share/applications/os.boon.transfer.desktop
       - install -Dm644 os.boon.transfer.metainfo.xml /app/share/metainfo/os.boon.transfer.metainfo.xml
       # Icon (Tauri ships it under the product name; rename to the app id).
+      # Install every size the deb carries; normalise a "@2"-style suffix.
       - |
-        for sz in 32 128 256; do
-          src=$(find usr/share/icons -path "*/${sz}x${sz}/*" -name '*.png' | head -1)
-          [ -n "$src" ] && install -Dm644 "$src" \
-            "/app/share/icons/hicolor/${sz}x${sz}/apps/os.boon.transfer.png"
+        set -e
+        for f in $(find usr/share/icons/hicolor -name '*.png'); do
+          size=$(printf '%s' "$f" | sed -E 's#.*/hicolor/([0-9]+x[0-9]+)[^/]*/.*#\1#')
+          install -Dm644 "$f" "/app/share/icons/hicolor/$size/apps/os.boon.transfer.png"
         done
     sources:
       - type: file

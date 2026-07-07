@@ -49,6 +49,12 @@ flatpak run os.boon.transfer
   verification and key auth.
 - Wayland + fallback X11 + `--device=dri` for the webview.
 
-**Not yet verified** with `flatpak-builder` in this environment. Confirm the
-runtime version (webkit2gtk availability) and the keyring portal on a real
-build before publishing to Flathub or the BooN-OS repo.
+**Verified** with `flatpak-builder` on **GNOME Platform 49** (a supported
+runtime): builds and installs, `libwebkit2gtk-4.1` resolves inside the sandbox,
+and the permissions apply (`network`, wayland/x11, `~/.ssh`, `home`, and
+`org.freedesktop.secrets` for the keyring). The desktop/icon/metainfo export
+under the `os.boon.transfer` app id. First run the setup once:
+
+```sh
+bash packaging/flatpak/setup-build-env.sh
+```

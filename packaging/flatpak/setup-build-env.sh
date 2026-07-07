@@ -4,7 +4,7 @@
 # Safe, standard packages. Run once:  ! bash packaging/flatpak/setup-build-env.sh
 set -euo pipefail
 
-RUNTIME_VERSION=47
+RUNTIME_VERSION=49
 
 echo "==> Installing flatpak + flatpak-builder (needs sudo)…"
 if command -v apt-get >/dev/null; then
