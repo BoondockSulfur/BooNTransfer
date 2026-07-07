@@ -228,8 +228,7 @@ Installierte **AppImages aktualisieren sich selbst** — unabhängig von der Dis
 Beim Start prüft die App ein GitHub-Release; ist eine neuere Version signiert
 verfügbar, bietet ein Banner *Installieren & neu starten*. Der Download wird
 gegen den eingebetteten Public Key verifiziert, bevor er angewandt wird.
-`.deb`/`.rpm` aktualisieren über den Paketmanager. Details:
-[RELEASING.md](RELEASING.md).
+`.deb`/`.rpm` aktualisieren über den Paketmanager.
 
 ## Roadmap
 
