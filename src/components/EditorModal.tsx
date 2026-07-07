@@ -1,3 +1,5 @@
+import { ask } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { useDialog, useDraggable } from "../hooks";
@@ -37,6 +39,13 @@ export default function EditorModal({
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const dirty = content !== original;
 
+  // Keep the latest dirty flag / translator reachable from the (stable) window
+  // close listener without re-registering it on every keystroke.
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const tRef = useRef(t);
+  tRef.current = t;
+
   useEffect(() => {
     void (async () => {
       setLoading(true);
@@ -61,6 +70,7 @@ export default function EditorModal({
     try {
       await api.writeText(connectionId, path, isLocal, content);
       setOriginal(content);
+      dirtyRef.current = false; // reflect immediately for the close guard
       onSaved(isLocal);
     } catch (e) {
       setError(isAppError(e) ? e.message : String(e));
@@ -70,6 +80,12 @@ export default function EditorModal({
   };
 
   const close = () => {
+    if (windowed) {
+      // Closing the window fires onCloseRequested below, which does the
+      // unsaved-changes guard for both this button and the native title bar.
+      onClose();
+      return;
+    }
     if (dirty && !window.confirm(t("editor.discard"))) return;
     onClose();
   };
@@ -79,6 +95,28 @@ export default function EditorModal({
   useEffect(() => {
     if (windowed && !loading && !error) areaRef.current?.focus();
   }, [windowed, loading, error]);
+
+  // Guard the window (native ✕ included) against discarding unsaved edits.
+  useEffect(() => {
+    if (!windowed) return;
+    const win = getCurrentWebviewWindow();
+    const unlisten = win.onCloseRequested(async (event) => {
+      if (!dirtyRef.current) return; // clean → let it close
+      event.preventDefault();
+      const tr = tRef.current;
+      const discard = await ask(tr("editor.discard"), {
+        title: name,
+        kind: "warning",
+        okLabel: tr("editor.discardOk"),
+        cancelLabel: tr("editor.keepEditing"),
+      });
+      if (discard) {
+        dirtyRef.current = false; // second close passes the guard
+        await win.close();
+      }
+    });
+    return () => void unlisten.then((u) => u());
+  }, [windowed, name]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {

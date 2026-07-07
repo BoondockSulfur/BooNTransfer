@@ -144,6 +144,8 @@ const de: Dict = {
   "editor.saving": "Speichert …",
   "editor.saveClose": "Speichern & Schließen",
   "editor.discard": "Ungespeicherte Änderungen verwerfen?",
+  "editor.discardOk": "Verwerfen",
+  "editor.keepEditing": "Weiter bearbeiten",
   "editor.local": "lokal",
   "editor.remote": "remote: {id}",
 
@@ -317,6 +319,8 @@ const en: Dict = {
   "editor.saving": "Saving …",
   "editor.saveClose": "Save & close",
   "editor.discard": "Discard unsaved changes?",
+  "editor.discardOk": "Discard",
+  "editor.keepEditing": "Keep editing",
   "editor.local": "local",
   "editor.remote": "remote: {id}",
 
