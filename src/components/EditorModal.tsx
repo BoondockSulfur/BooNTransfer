@@ -111,8 +111,9 @@ export default function EditorModal({
         cancelLabel: tr("editor.keepEditing"),
       });
       if (discard) {
-        dirtyRef.current = false; // second close passes the guard
-        await win.close();
+        // destroy() force-closes without re-firing onCloseRequested; calling
+        // close() from inside its own handler would re-enter and hang.
+        await win.destroy();
       }
     });
     return () => void unlisten.then((u) => u());
