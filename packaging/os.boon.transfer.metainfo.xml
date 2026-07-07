@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>os.boon.transfer</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>BooN Transfer</name>
+  <summary>Dual-pane SFTP/SCP/FTP/FTPS file transfer client</summary>
+
+  <description>
+    <p>
+      BooN Transfer is a dual-pane file transfer client for SFTP, SCP, FTP and
+      FTPS. It offers a familiar side-by-side local/remote workflow with saved
+      sessions and a background transfer queue.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>SFTP and SCP over SSH, plus FTP and FTPS — all pure Rust (russh/rustls, no OpenSSL)</li>
+      <li>Password, SSH key and SSH-agent authentication with host-key verification</li>
+      <li>Saved sessions and a connection manager</li>
+      <li>Transfer queue with pause, resume, cancel, retry and SHA-256 verification</li>
+      <li>Directory synchronisation and a built-in text editor</li>
+      <li>Passwords stored in the system keyring, never in plain text</li>
+      <li>Tabs, detachable windows, light/dark themes, German and English UI</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">os.boon.transfer.desktop</launchable>
+
+  <categories>
+    <category>Network</category>
+    <category>FileTransfer</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>SFTP</keyword>
+    <keyword>SCP</keyword>
+    <keyword>FTP</keyword>
+    <keyword>FTPS</keyword>
+    <keyword>SSH</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/BoondockSulfur/BooNTransfer</url>
+  <url type="bugtracker">https://github.com/BoondockSulfur/BooNTransfer/issues</url>
+
+  <developer id="os.boon">
+    <name>BoondockSulfur</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0" date="2026-07-07">
+      <description>
+        <p>
+          Initial release: SFTP, SCP, FTP and FTPS; transfer queue with
+          pause/resume; directory sync; built-in editor; keyring credential
+          storage; German and English UI.
+        </p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -1,0 +1,61 @@
+# Flatpak manifest for BooN Transfer.
+#
+# Strategy: build the .deb with `npm run tauri build` first, then this manifest
+# unpacks it into the Flatpak. The GNOME runtime provides webkit2gtk, which the
+# Tauri webview needs.
+#
+# Build:
+#   npm run tauri build                       # produces the .deb
+#   cp "src-tauri/target/release/bundle/deb/BooN Transfer_0.1.0_amd64.deb" \
+#      packaging/flatpak/boon-transfer.deb
+#   flatpak-builder --user --install --force-clean build-dir \
+#      packaging/flatpak/os.boon.transfer.yml
+#
+# NOTE: not yet verified with flatpak-builder in this repo — treat runtime
+# version and finish-args as a reviewed starting point, confirm on a real build.
+id: os.boon.transfer
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: boon-transfer
+
+finish-args:
+  # File transfer client: needs the network.
+  - --share=network
+  - --share=ipc
+  # Display.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Secret Service (system keyring) for stored passwords.
+  - --talk-name=org.freedesktop.secrets
+  # Browse and transfer local files.
+  - --filesystem=home
+  # Read ~/.ssh (known_hosts, keys) for host-key verification and key auth.
+  - --filesystem=~/.ssh
+
+modules:
+  - name: boon-transfer
+    buildsystem: simple
+    build-commands:
+      # Unpack the Debian package (ar + tar are in the SDK).
+      - ar x boon-transfer.deb
+      - tar -xf data.tar.*
+      - install -Dm755 usr/bin/boon-transfer /app/bin/boon-transfer
+      # Desktop entry + AppStream metadata (canonical copies from packaging/).
+      - install -Dm644 os.boon.transfer.desktop /app/share/applications/os.boon.transfer.desktop
+      - install -Dm644 os.boon.transfer.metainfo.xml /app/share/metainfo/os.boon.transfer.metainfo.xml
+      # Icon (Tauri ships it under the product name; rename to the app id).
+      - |
+        for sz in 32 128 256; do
+          src=$(find usr/share/icons -path "*/${sz}x${sz}/*" -name '*.png' | head -1)
+          [ -n "$src" ] && install -Dm644 "$src" \
+            "/app/share/icons/hicolor/${sz}x${sz}/apps/os.boon.transfer.png"
+        done
+    sources:
+      - type: file
+        path: boon-transfer.deb
+      - type: file
+        path: ../os.boon.transfer.desktop
+      - type: file
+        path: ../os.boon.transfer.metainfo.xml

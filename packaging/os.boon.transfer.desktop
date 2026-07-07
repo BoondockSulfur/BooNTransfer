@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=BooN Transfer
+GenericName=File Transfer Client
+Comment=Dual-pane SFTP/SCP/FTP/FTPS file transfer client
+Exec=boon-transfer %U
+Icon=os.boon.transfer
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=SFTP;SCP;FTP;FTPS;SSH;transfer;upload;download;server;remote;
+StartupNotify=true
+StartupWMClass=BooN Transfer
