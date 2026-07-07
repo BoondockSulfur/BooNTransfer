@@ -217,16 +217,26 @@ Fehler), Tests (`--locked`) und optionaler Bundle-Build mit Artefakt-Upload.
 - **⧉** dockt ein Panel oder die Warteschlange als eigenes Fenster ab (arbeitet
   gegen denselben Backend-Zustand).
 
+## Updates
+
+Installierte **AppImages aktualisieren sich selbst** — unabhängig von der Distro.
+Beim Start prüft die App ein GitHub-Release; ist eine neuere Version signiert
+verfügbar, bietet ein Banner *Installieren & neu starten*. Der Download wird
+gegen den eingebetteten Public Key verifiziert, bevor er angewandt wird.
+`.deb`/`.rpm` aktualisieren über den Paketmanager. Details:
+[RELEASING.md](RELEASING.md).
+
 ## Roadmap
 
 1. Eingebautes SSH-Terminal.
 2. WebDAV- und S3-kompatibler Provider.
-3. Signierte Releases / Flatpak-Verifikation für den BooN-OS-Repo.
+3. Flatpak-Build für den BooN-OS-Repo verifizieren.
 4. Cross-Window-Drag-and-Drop zwischen abgedockten Fenstern.
 
 Erledigt: russh-Kern mit Pipelining · SFTP/SCP/FTP/FTPS · Agent-Auth ·
 Konfliktdialog · Resume · SHA-256 · Verzeichnis-Sync · eingebauter Editor · Tabs
-· abdockbare Fenster · i18n (de/en) · Barrierefreiheit · MIT-Lizenz · Packaging.
+· abdockbare Fenster · i18n (de/en) · Barrierefreiheit · MIT-Lizenz · Packaging ·
+**signierte Self-Updates**.
 
 ## Lizenz
 

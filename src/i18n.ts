@@ -177,6 +177,12 @@ const de: Dict = {
   "status.checkFail": "SHA-256 stimmt NICHT: {name}",
   "status.checkNa": "SHA-256 für {name} nicht verfügbar",
   "status.editorOpened": "„{name}“ geöffnet — Speichern lädt automatisch hoch",
+
+  "update.available": "Update auf {version} verfügbar",
+  "update.install": "Installieren & neu starten",
+  "update.installing": "Wird installiert …",
+  "update.dismiss": "Später",
+  "update.failed": "Update fehlgeschlagen: {error}",
 };
 
 const en: Dict = {
@@ -344,6 +350,12 @@ const en: Dict = {
   "status.checkFail": "SHA-256 does NOT match: {name}",
   "status.checkNa": "SHA-256 not available for {name}",
   "status.editorOpened": "“{name}” opened — saving uploads automatically",
+
+  "update.available": "Update to {version} available",
+  "update.install": "Install & restart",
+  "update.installing": "Installing …",
+  "update.dismiss": "Later",
+  "update.failed": "Update failed: {error}",
 };
 
 const DICTS: Record<Lang, Dict> = { de, en };

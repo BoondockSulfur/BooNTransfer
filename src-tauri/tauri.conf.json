@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["deb", "rpm", "appimage"],
     "icon": [
       "icons/32x32.png",
@@ -37,7 +38,7 @@
     ],
     "category": "Utility",
     "shortDescription": "Dual-pane SFTP/SCP/FTP/FTPS file transfer client",
-    "longDescription": "BooN Transfer is a dual-pane file transfer client for SFTP, SCP, FTP and FTPS with saved sessions, a background transfer queue with pause/resume, directory synchronisation, a built-in editor, and secure credential storage via the system keyring. Built on russh and rustls (pure Rust, no OpenSSL).",
+    "longDescription": "BooN Transfer is a dual-pane file transfer client for SFTP, SCP, FTP and FTPS with saved sessions, a background transfer queue with pause/resume, directory synchronisation, a built-in editor, and secure credential storage via the system keyring. Built on russh and rustls — no OpenSSL, no libssh2.",
     "linux": {
       "deb": {
         "depends": [],
@@ -47,6 +48,14 @@
         "depends": [],
         "desktopTemplate": "../packaging/linux/boon-transfer.desktop.hbs"
       }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1NzY1OTc2OEY4QzlCMDEKUldRQm00eVBkbGwySlI4ZUI5UzZ5L05FWTVJVFZnaDlSUzF6SnRnQzhFTkszbGlpWUhOa3pUWlIK",
+      "endpoints": [
+        "https://github.com/BoondockSulfur/BooNTransfer/releases/latest/download/latest.json"
+      ]
     }
   }
 }

@@ -90,6 +90,25 @@ button:focus-visible,
 .modal:focus {
   outline: none;
 }
+
+/* Self-update banner (below the top bar) */
+.update-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(47, 157, 146, 0.18),
+    rgba(74, 158, 255, 0.16)
+  );
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+}
+.update-msg {
+  font-weight: 600;
+}
 button.primary {
   background: var(--accent);
   border-color: var(--accent);

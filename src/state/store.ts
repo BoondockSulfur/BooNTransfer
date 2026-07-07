@@ -12,6 +12,11 @@ interface AppStore {
   lang: Lang;
   setLang: (l: Lang) => void;
 
+  update: { version: string; notes?: string } | null;
+  setUpdate: (u: { version: string; notes?: string } | null) => void;
+  updating: boolean;
+  setUpdating: (v: boolean) => void;
+
   sessions: SessionInfo[];
   setSessions: (s: SessionInfo[]) => void;
 
@@ -54,6 +59,11 @@ export const useStore = create<AppStore>((set) => ({
     localStorage.setItem("boon.lang", lang);
     set({ lang });
   },
+
+  update: null,
+  setUpdate: (update) => set({ update }),
+  updating: false,
+  setUpdating: (updating) => set({ updating }),
 
   sessions: [],
   setSessions: (sessions) => set({ sessions }),

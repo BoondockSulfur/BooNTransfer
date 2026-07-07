@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, onQueueUpdate, onTransferProgress } from "./api";
 import { useT } from "./i18n";
+import { checkForUpdate, installPendingUpdate } from "./updater";
 import ConflictDialog from "./components/ConflictDialog";
 import ConnectionManager from "./components/ConnectionManager";
 import EditorModal, { type EditorTarget } from "./components/EditorModal";
@@ -49,6 +50,10 @@ export default function App() {
   const tr = useT();
   const lang = useStore((s) => s.lang);
   const setLang = useStore((s) => s.setLang);
+  const update = useStore((s) => s.update);
+  const setUpdate = useStore((s) => s.setUpdate);
+  const updating = useStore((s) => s.updating);
+  const setUpdating = useStore((s) => s.setUpdating);
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const sessions = useStore((s) => s.sessions);
@@ -112,6 +117,24 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // Check for an app update on startup (no-op in dev / browser).
+  useEffect(() => {
+    void checkForUpdate().then((info) => {
+      if (info) setUpdate(info);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const runUpdate = async () => {
+    setUpdating(true);
+    try {
+      await installPendingUpdate(); // relaunches on success
+    } catch (e) {
+      setUpdating(false);
+      setStatus(tr("update.failed", { error: String(e) }), "error");
+    }
+  };
 
   // initial data + event wiring
   useEffect(() => {
@@ -389,6 +412,29 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {update && (
+        <div className="update-bar" role="status">
+          <span className="update-msg">
+            ⬆ {tr("update.available", { version: update.version })}
+          </span>
+          <span className="spacer" />
+          <button
+            className="ghost mini"
+            disabled={updating}
+            onClick={() => setUpdate(null)}
+          >
+            {tr("update.dismiss")}
+          </button>
+          <button
+            className="primary mini"
+            disabled={updating}
+            onClick={() => void runUpdate()}
+          >
+            {updating ? tr("update.installing") : tr("update.install")}
+          </button>
+        </div>
+      )}
 
       {tabs.length > 0 && (
         <nav className="tabbar">
