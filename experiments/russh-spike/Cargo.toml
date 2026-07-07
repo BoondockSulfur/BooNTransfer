@@ -1,0 +1,14 @@
+[package]
+name = "russh-spike"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+russh = "0.45"
+russh-sftp = "2"
+ssh2 = { version = "0.9", features = ["vendored-openssl"] }
+anyhow = "1"
+async-trait = "0.1"
+futures = "0.3"

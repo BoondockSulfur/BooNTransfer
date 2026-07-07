@@ -1,0 +1,21 @@
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# rust / tauri
+src-tauri/target/
+src-tauri/gen/
+
+# editor / os
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# local env
+.env
+.env.local
+
+# experiment build artifacts
+experiments/*/target/
