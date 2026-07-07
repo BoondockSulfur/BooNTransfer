@@ -7,10 +7,31 @@ pub mod ftp;
 pub mod local;
 pub mod sftp;
 
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::sync::mpsc::UnboundedReceiver;
 use tokio_util::sync::CancellationToken;
+
+/// One chunk of output from an interactive shell, or its end.
+pub enum TerminalEvent {
+    Data(Vec<u8>),
+    Exit,
+}
+
+/// Handle to drive an interactive shell (write input, resize, close).
+#[async_trait::async_trait]
+pub trait Terminal: Send + Sync {
+    async fn write(&self, data: &[u8]) -> Result<()>;
+    async fn resize(&self, cols: u32, rows: u32) -> Result<()>;
+    async fn close(&self) -> Result<()>;
+}
+
+/// A live shell: a handle plus a stream of output events.
+pub struct TerminalSession {
+    pub handle: Box<dyn Terminal>,
+    pub output: UnboundedReceiver<TerminalEvent>,
+}
 
 /// A single directory entry, protocol-independent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,6 +98,14 @@ pub trait FileProvider: Send + Sync {
         progress: &mut ProgressFn,
         cancel: &CancellationToken,
     ) -> Result<()>;
+
+    /// Opens an interactive shell with a PTY of the given size. Only SSH-based
+    /// providers support this; the default returns an error.
+    async fn open_terminal(&self, _cols: u32, _rows: u32) -> Result<TerminalSession> {
+        Err(AppError::other(
+            "Terminal wird für dieses Protokoll nicht unterstützt",
+        ))
+    }
 }
 
 /// Joins a base directory and a child name using POSIX ('/') semantics. This is

@@ -880,6 +880,19 @@ select option {
 .detached-editor .editor-head {
   border-radius: 0;
 }
+/* interactive SSH terminal window */
+.detached-terminal {
+  padding: 6px 8px;
+  background: var(--panel);
+}
+.terminal-view {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.terminal-view .xterm {
+  height: 100%;
+}
 
 /* directory sync dialog */
 .sync {

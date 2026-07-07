@@ -1,7 +1,7 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { EditorTarget } from "./components/EditorModal";
 
-export type DetachedView = "local" | "remote" | "queue" | "editor";
+export type DetachedView = "local" | "remote" | "queue" | "editor" | "terminal";
 
 let seq = 0;
 
@@ -47,4 +47,13 @@ export function openEditorWindow(target: EditorTarget) {
     width: 900,
     height: 680,
   });
+}
+
+/** Opens an interactive SSH terminal for a connection in its own window. */
+export function openTerminalWindow(connectionId: string, title: string) {
+  return openDetached(
+    "terminal",
+    { connectionId },
+    { title: `⌨ ${title}`, width: 900, height: 560 },
+  );
 }

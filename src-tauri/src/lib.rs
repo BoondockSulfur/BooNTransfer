@@ -7,16 +7,21 @@ pub mod transfer;
 
 mod commands;
 
+use protocol::Terminal;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex as StdMutex};
 use tauri::Manager;
 use transfer::{ConnMap, Queue};
+
+/// Active interactive shells, keyed by a frontend-generated terminal id.
+pub type TermMap = Arc<StdMutex<HashMap<String, Arc<dyn Terminal>>>>;
 
 /// Application-wide state managed by Tauri and shared with every command.
 pub struct AppState {
     pub connections: ConnMap,
     pub queue: Queue,
     pub sessions: session::Store,
+    pub terminals: TermMap,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,6 +41,7 @@ pub fn run() {
                 connections,
                 queue,
                 sessions,
+                terminals: Arc::new(StdMutex::new(HashMap::new())),
             });
             tracing::info!("BooN Transfer started");
             Ok(())
@@ -69,6 +75,10 @@ pub fn run() {
             commands::transfer_cancel,
             commands::transfer_retry,
             commands::clear_finished,
+            commands::terminal_open,
+            commands::terminal_write,
+            commands::terminal_resize,
+            commands::terminal_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running BooN Transfer");

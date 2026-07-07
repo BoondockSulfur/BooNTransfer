@@ -114,6 +114,20 @@ export const api = {
   transferCancel: (id: string) => invoke<void>("transfer_cancel", { id }),
   transferRetry: (id: string) => invoke<void>("transfer_retry", { id }),
   clearFinished: () => invoke<void>("clear_finished"),
+
+  // interactive terminal (SSH)
+  terminalOpen: (
+    connectionId: string,
+    terminalId: string,
+    cols: number,
+    rows: number,
+  ) => invoke<void>("terminal_open", { connectionId, terminalId, cols, rows }),
+  terminalWrite: (terminalId: string, data: number[]) =>
+    invoke<void>("terminal_write", { terminalId, data }),
+  terminalResize: (terminalId: string, cols: number, rows: number) =>
+    invoke<void>("terminal_resize", { terminalId, cols, rows }),
+  terminalClose: (terminalId: string) =>
+    invoke<void>("terminal_close", { terminalId }),
 };
 
 export function onQueueUpdate(
@@ -141,4 +155,20 @@ export function onFileSaved(
   return listen<{ isLocal: boolean }>("boon:file-saved", (e) =>
     cb(e.payload.isLocal),
   );
+}
+
+export function onTerminalOutput(
+  terminalId: string,
+  cb: (data: Uint8Array) => void,
+): Promise<UnlistenFn> {
+  return listen<number[]>(`terminal-output:${terminalId}`, (e) =>
+    cb(new Uint8Array(e.payload)),
+  );
+}
+
+export function onTerminalExit(
+  terminalId: string,
+  cb: () => void,
+): Promise<UnlistenFn> {
+  return listen(`terminal-exit:${terminalId}`, () => cb());
 }

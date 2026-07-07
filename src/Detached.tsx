@@ -9,10 +9,11 @@ import {
 } from "./api";
 import EditorModal, { type EditorTarget } from "./components/EditorModal";
 import FilePane from "./components/FilePane";
+import TerminalView from "./components/TerminalView";
 import TransferQueue from "./components/TransferQueue";
 import { useT } from "./i18n";
 import { useStore } from "./state/store";
-import { openEditorWindow } from "./windows";
+import { openEditorWindow, openTerminalWindow } from "./windows";
 
 /**
  * Standalone renderer for a detached window. It talks to the same Rust backend
@@ -64,6 +65,14 @@ export default function Detached({
     );
   }
 
+  if (view === "terminal") {
+    return (
+      <div className="detached detached-terminal">
+        <TerminalView connectionId={params.get("connectionId") ?? ""} />
+      </div>
+    );
+  }
+
   if (view === "editor") {
     const target: EditorTarget = {
       isLocal: params.get("isLocal") === "1",
@@ -97,6 +106,14 @@ export default function Detached({
           connectionId={params.get("connectionId") ?? undefined}
           onStatus={setStatus}
           onTransferFiles={() => {}}
+          onTerminal={
+            view === "remote"
+              ? () => {
+                  const cid = params.get("connectionId") ?? "";
+                  openTerminalWindow(cid, cid);
+                }
+              : undefined
+          }
           onOpenFile={openEditorWindow}
           detached
         />

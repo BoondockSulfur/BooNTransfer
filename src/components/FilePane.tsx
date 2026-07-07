@@ -48,6 +48,8 @@ interface Props {
   ) => void;
   /** Opens this pane in its own OS window (hidden when already detached). */
   onDetach?: () => void;
+  /** Opens an SSH terminal for this pane's connection (remote panes only). */
+  onTerminal?: () => void;
   /** True when rendered inside a detached window (transfers are disabled). */
   detached?: boolean;
   /** Opens a (text) file in the built-in editor. */
@@ -391,6 +393,11 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
           >
             ＋
           </button>
+          {props.onTerminal && (
+            <button title={t("pane.terminal")} onClick={props.onTerminal}>
+              ⌨
+            </button>
+          )}
           {props.onDetach && (
             <button title={t("pane.detach")} onClick={props.onDetach}>
               ⧉

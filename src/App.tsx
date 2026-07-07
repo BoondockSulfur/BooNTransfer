@@ -22,7 +22,7 @@ import type {
   SyncDirection,
   SyncItem,
 } from "./types";
-import { openDetached, openEditorWindow } from "./windows";
+import { openDetached, openEditorWindow, openTerminalWindow } from "./windows";
 
 type TransferDir = "upload" | "download";
 
@@ -554,6 +554,11 @@ export default function App() {
           onStatus={setStatus}
           onTransferFiles={handleTransfer}
           onDetach={activeTab ? detachRemote : undefined}
+          onTerminal={
+            activeTab
+              ? () => openTerminalWindow(activeTab.id, activeTab.title)
+              : undefined
+          }
           onOpenFile={openEditorWindow}
         />
       </main>

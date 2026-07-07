@@ -6,7 +6,7 @@
 //! the SFTP session is internally `Arc`-multiplexed and the SSH `Handle` sits
 //! behind a mutex for the occasional exec channel (checksums).
 
-use super::{FileEntry, FileProvider, ProgressFn};
+use super::{FileEntry, FileProvider, ProgressFn, Terminal, TerminalEvent, TerminalSession};
 use crate::error::{AppError, Result};
 use futures::stream::{FuturesUnordered, StreamExt};
 use russh::client::{Config, Handle, Handler};
@@ -15,7 +15,7 @@ use russh_sftp::client::RawSftpSession;
 use russh_sftp::protocol::{FileAttributes, OpenFlags};
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::{mpsc, Mutex as AsyncMutex};
 use tokio_util::sync::CancellationToken;
 
 const CHUNK: usize = 32 * 1024; // SFTP data packet size (widely accepted)
@@ -23,6 +23,38 @@ const CONC: usize = 64; // concurrent in-flight requests (pipelining)
 const WINDOW: u32 = 64 * 1024 * 1024; // large channel window for high-latency links
 const S_IFMT: u32 = 0o170000;
 const S_IFLNK: u32 = 0o120000;
+
+/// Commands sent to a shell channel's actor task.
+enum TermMsg {
+    Input(Vec<u8>),
+    Resize(u32, u32),
+    Close,
+}
+
+/// Handle to an interactive SSH shell; forwards to the channel's actor task.
+struct SshTerminal {
+    tx: mpsc::UnboundedSender<TermMsg>,
+}
+
+#[async_trait::async_trait]
+impl Terminal for SshTerminal {
+    async fn write(&self, data: &[u8]) -> Result<()> {
+        self.tx
+            .send(TermMsg::Input(data.to_vec()))
+            .map_err(|_| AppError::other("Terminal ist geschlossen"))?;
+        Ok(())
+    }
+    async fn resize(&self, cols: u32, rows: u32) -> Result<()> {
+        self.tx
+            .send(TermMsg::Resize(cols, rows))
+            .map_err(|_| AppError::other("Terminal ist geschlossen"))?;
+        Ok(())
+    }
+    async fn close(&self) -> Result<()> {
+        let _ = self.tx.send(TermMsg::Close);
+        Ok(())
+    }
+}
 const S_IFDIR: u32 = 0o040000;
 
 pub enum AuthMethod {
@@ -302,6 +334,61 @@ impl FileProvider for SftpProvider {
         let text = String::from_utf8_lossy(&out);
         let hash = text.split_whitespace().next().map(str::to_string);
         Ok(hash.filter(|h| h.len() == 64 && h.bytes().all(|b| b.is_ascii_hexdigit())))
+    }
+
+    async fn open_terminal(&self, cols: u32, rows: u32) -> Result<TerminalSession> {
+        let mut channel = {
+            let handle = self.handle.lock().await;
+            handle.channel_open_session().await?
+        };
+        channel
+            .request_pty(false, "xterm-256color", cols, rows, 0, 0, &[])
+            .await?;
+        channel.request_shell(true).await?;
+
+        let (in_tx, mut in_rx) = mpsc::unbounded_channel::<TermMsg>();
+        let (out_tx, out_rx) = mpsc::unbounded_channel::<TerminalEvent>();
+
+        // One task owns the channel: it multiplexes shell output (→ out_tx) and
+        // caller commands (← in_rx: input, resize, close).
+        tokio::spawn(async move {
+            loop {
+                tokio::select! {
+                    msg = channel.wait() => match msg {
+                        Some(russh::ChannelMsg::Data { data }) => {
+                            let _ = out_tx.send(TerminalEvent::Data(data.to_vec()));
+                        }
+                        Some(russh::ChannelMsg::ExtendedData { data, .. }) => {
+                            let _ = out_tx.send(TerminalEvent::Data(data.to_vec()));
+                        }
+                        None
+                        | Some(russh::ChannelMsg::Eof)
+                        | Some(russh::ChannelMsg::Close) => {
+                            let _ = out_tx.send(TerminalEvent::Exit);
+                            break;
+                        }
+                        _ => {}
+                    },
+                    cmd = in_rx.recv() => match cmd {
+                        Some(TermMsg::Input(d)) => {
+                            let _ = channel.data(&d[..]).await;
+                        }
+                        Some(TermMsg::Resize(c, r)) => {
+                            let _ = channel.window_change(c, r, 0, 0).await;
+                        }
+                        None | Some(TermMsg::Close) => {
+                            let _ = channel.close().await;
+                            break;
+                        }
+                    },
+                }
+            }
+        });
+
+        Ok(TerminalSession {
+            handle: Box::new(SshTerminal { tx: in_tx }),
+            output: out_rx,
+        })
     }
 
     async fn download_to(

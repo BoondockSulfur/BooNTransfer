@@ -909,3 +909,78 @@ pub fn transfer_retry(state: State<'_, AppState>, id: String) {
 pub fn clear_finished(state: State<'_, AppState>) {
     state.queue.clear_finished();
 }
+
+// ---------------------------------------------------------------------------
+// interactive terminal (SSH)
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn terminal_open(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    connection_id: String,
+    terminal_id: String,
+    cols: u32,
+    rows: u32,
+) -> Result<()> {
+    let provider = conn(&state, &connection_id)?;
+    let session = provider.open_terminal(cols, rows).await?;
+    let mut output = session.output;
+    state
+        .terminals
+        .lock()
+        .unwrap()
+        .insert(terminal_id.clone(), Arc::from(session.handle));
+    // Forward shell output to the frontend as per-terminal events.
+    tauri::async_runtime::spawn(async move {
+        use tauri::Emitter;
+        while let Some(ev) = output.recv().await {
+            match ev {
+                protocol::TerminalEvent::Data(d) => {
+                    let _ = app.emit(&format!("terminal-output:{terminal_id}"), d);
+                }
+                protocol::TerminalEvent::Exit => {
+                    let _ = app.emit(&format!("terminal-exit:{terminal_id}"), ());
+                    break;
+                }
+            }
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn terminal_write(
+    state: State<'_, AppState>,
+    terminal_id: String,
+    data: Vec<u8>,
+) -> Result<()> {
+    let term = state.terminals.lock().unwrap().get(&terminal_id).cloned();
+    if let Some(t) = term {
+        t.write(&data).await?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn terminal_resize(
+    state: State<'_, AppState>,
+    terminal_id: String,
+    cols: u32,
+    rows: u32,
+) -> Result<()> {
+    let term = state.terminals.lock().unwrap().get(&terminal_id).cloned();
+    if let Some(t) = term {
+        t.resize(cols, rows).await?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn terminal_close(state: State<'_, AppState>, terminal_id: String) -> Result<()> {
+    let term = state.terminals.lock().unwrap().remove(&terminal_id);
+    if let Some(t) = term {
+        t.close().await?;
+    }
+    Ok(())
+}
