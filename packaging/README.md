@@ -33,7 +33,7 @@ The manifest unpacks the built `.deb`. From the repo root:
 
 ```sh
 npm run tauri build
-cp "src-tauri/target/release/bundle/deb/BooN Transfer_0.1.0_amd64.deb" \
+cp "src-tauri/target/release/bundle/deb/Boon Transfer_1.0.0_amd64.deb" \
    packaging/flatpak/boon-transfer.deb
 # Keep build-dir and state OUT of the repo — the build tree unpacks a root fs
 # with symlink loops that otherwise crash the Vite dev watcher (ELOOP).

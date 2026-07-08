@@ -6,7 +6,7 @@
 #
 # Build:
 #   npm run tauri build                       # produces the .deb
-#   cp "src-tauri/target/release/bundle/deb/BooN Transfer_0.1.0_amd64.deb" \
+#   cp "src-tauri/target/release/bundle/deb/Boon Transfer_1.0.0_amd64.deb" \
 #      packaging/flatpak/boon-transfer.deb
 #   flatpak-builder --user --install --force-clean \
 #      --state-dir "$HOME/.cache/boon-transfer-flatpak" \

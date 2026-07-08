@@ -1,6 +1,6 @@
 [package]
 name = "linuxscp-client"
-version = "0.1.0"
+version = "1.0.0"
 description = "BooN Transfer — dual-pane SFTP/SCP/FTP/FTPS file transfer client"
 authors = ["BoondockSulfur"]
 license = "MIT"
