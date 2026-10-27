@@ -4,6 +4,7 @@
 //! touching the UI or the queue.
 
 pub mod ftp;
+mod http;
 pub mod local;
 pub mod s3;
 pub mod sftp;
@@ -72,6 +73,24 @@ pub trait FileProvider: Send + Sync {
     async fn rename(&self, from: &str, to: &str) -> Result<()>;
     async fn set_permissions(&self, path: &str, mode: u32) -> Result<()>;
 
+    /// Whether `upload_from` can append at an offset > 0. Providers without
+    /// resume (whole-object uploads) restart from 0 instead.
+    fn supports_upload_resume(&self) -> bool {
+        true
+    }
+
+    /// Whether `set_mtime` really stores the modification time. Directory sync
+    /// only trusts timestamps when the remote side preserves them.
+    fn can_set_mtime(&self) -> bool {
+        false
+    }
+
+    /// Sets the modification time (Unix seconds). Best effort: providers that
+    /// cannot do it return `Ok(())` and report `can_set_mtime() == false`.
+    async fn set_mtime(&self, _path: &str, _mtime: i64) -> Result<()> {
+        Ok(())
+    }
+
     /// Returns the file's lowercase hex SHA-256, or `None` if the protocol/server
     /// cannot compute it (used for optional post-transfer verification).
     async fn checksum_sha256(&self, _path: &str) -> Result<Option<String>> {
@@ -124,6 +143,12 @@ pub fn posix_join(base: &str, name: &str) -> String {
         format!("{trimmed}/{name}")
     };
     normalize_posix(&joined)
+}
+
+/// A single path component as received from a server is only accepted when it
+/// cannot escape its directory: no separators, no NUL, not `.`/`..`.
+pub fn is_safe_name(name: &str) -> bool {
+    !name.is_empty() && name != "." && name != ".." && !name.contains('/') && !name.contains('\0')
 }
 
 /// Returns the parent directory of a POSIX path, or the path itself if it is
@@ -198,6 +223,19 @@ mod tests {
         assert_eq!(normalize_posix("/.."), "/");
         assert_eq!(normalize_posix("/"), "/");
         assert_eq!(normalize_posix(""), "/");
+    }
+
+    #[test]
+    fn safe_names() {
+        assert!(is_safe_name("datei.txt"));
+        assert!(is_safe_name("..versteckt"));
+        assert!(!is_safe_name(""));
+        assert!(!is_safe_name("."));
+        assert!(!is_safe_name(".."));
+        assert!(!is_safe_name("../../.bashrc"));
+        assert!(!is_safe_name("/etc/passwd"));
+        assert!(is_safe_name("a\\b")); // not a separator on Linux
+        assert!(!is_safe_name("a\0b"));
     }
 
     #[test]

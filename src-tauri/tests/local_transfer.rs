@@ -2,9 +2,9 @@
 //! (no network). Cover the read/write/progress loop, resume, and cancellation
 //! that the SFTP provider and the transfer queue rely on.
 
-use linuxscp_lib::error::AppError;
-use linuxscp_lib::protocol::local::{copy_with_progress, LocalProvider};
-use linuxscp_lib::protocol::FileProvider;
+use boon_transfer_lib::error::AppError;
+use boon_transfer_lib::protocol::local::{copy_with_progress, LocalProvider};
+use boon_transfer_lib::protocol::FileProvider;
 use tokio_util::sync::CancellationToken;
 
 fn scratch(name: &str) -> std::path::PathBuf {

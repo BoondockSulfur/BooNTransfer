@@ -1,19 +1,16 @@
 //! WebDAV / WebDAVS provider over HTTP(S) using reqwest (rustls) + quick-xml.
 //!
 //! Directory listings use `PROPFIND Depth: 1`; the rest map to WebDAV verbs
-//! (MKCOL, DELETE, MOVE, GET/PUT). Auth is HTTP Basic. Uploads are buffered in
-//! memory (WebDAV has no standard resume); downloads stream with Range support.
+//! (MKCOL, DELETE, MOVE, GET/PUT). Auth is HTTP Basic. Uploads stream with a
+//! fixed length (WebDAV has no standard resume); downloads stream with Range.
 
-use super::{FileEntry, FileProvider, ProgressFn};
+use super::{http, FileEntry, FileProvider, ProgressFn};
 use crate::error::{AppError, Result};
-use futures::StreamExt;
 use percent_encoding::percent_decode_str;
 use quick_xml::events::Event;
 use reqwest::{Client, Method, Url};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::sync::CancellationToken;
-
-const CHUNK: usize = 128 * 1024;
 
 pub struct WebdavProvider {
     client: Client,
@@ -122,7 +119,7 @@ impl WebdavProvider {
             format!("{root}/")
         };
         let base = Url::parse(&format!("{scheme}://{host}:{port}{root}")).map_err(werr)?;
-        let client = Client::builder().build().map_err(werr)?;
+        let client = http::client().map_err(werr)?;
         let p = WebdavProvider {
             client,
             base,
@@ -190,6 +187,10 @@ impl FileProvider for WebdavProvider {
         "webdav"
     }
 
+    fn supports_upload_resume(&self) -> bool {
+        false
+    }
+
     async fn home_dir(&self) -> Result<String> {
         Ok("/".to_string())
     }
@@ -251,7 +252,8 @@ impl FileProvider for WebdavProvider {
         let dest = self.url_for(to)?;
         self.req(Method::from_bytes(b"MOVE").unwrap(), url)
             .header("Destination", dest.as_str())
-            .header("Overwrite", "T")
+            // Never replace an existing target silently (same as SFTP rename).
+            .header("Overwrite", "F")
             .send()
             .await
             .map_err(werr)?
@@ -285,16 +287,7 @@ impl FileProvider for WebdavProvider {
             .map_err(werr)?
             .error_for_status()
             .map_err(werr)?;
-        let mut stream = resp.bytes_stream();
-        while let Some(chunk) = stream.next().await {
-            if cancel.is_cancelled() {
-                return Err(AppError::Cancelled);
-            }
-            let chunk = chunk.map_err(werr)?;
-            dst.write_all(&chunk).await?;
-            progress(chunk.len() as u64);
-        }
-        Ok(())
+        http::receive(resp, dst, offset, progress, cancel).await
     }
 
     async fn upload_from(
@@ -309,26 +302,9 @@ impl FileProvider for WebdavProvider {
         if offset > 0 {
             return Err(AppError::other("WebDAV unterstützt kein Resume"));
         }
-        // WebDAV PUT has no standard chunked resume, so buffer the file.
-        let mut buf: Vec<u8> = Vec::with_capacity(size as usize);
-        let mut chunk = vec![0u8; CHUNK];
-        loop {
-            if cancel.is_cancelled() {
-                return Err(AppError::Cancelled);
-            }
-            let n = src.read(&mut chunk).await?;
-            if n == 0 {
-                break;
-            }
-            buf.extend_from_slice(&chunk[..n]);
-            progress(n as u64);
-        }
         let url = self.url_for(remote)?;
-        self.req(Method::PUT, url)
-            .body(buf)
-            .send()
-            .await
-            .map_err(werr)?
+        http::send_streaming(self.req(Method::PUT, url), src, size, progress, cancel)
+            .await?
             .error_for_status()
             .map_err(werr)?;
         Ok(())

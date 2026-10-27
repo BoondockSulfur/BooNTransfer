@@ -25,6 +25,7 @@ const EMPTY: SessionInfo = {
   localDir: "",
   bucket: "",
   region: "",
+  useTls: true,
 };
 
 export default function ConnectionManager({ onClose, onConnect }: Props) {
@@ -312,6 +313,9 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
           {(form.protocol === "webdav" || form.protocol === "webdavs") && (
             <p className="hint">{t("conn.webdavPath")}</p>
           )}
+          {form.protocol === "scp" && (
+            <p className="hint">{t("conn.scpHint")}</p>
+          )}
           {form.protocol === "s3" && (
             <>
               <div className="row">
@@ -331,6 +335,14 @@ export default function ConnectionManager({ onClose, onConnect }: Props) {
                   />
                 </label>
               </div>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={form.useTls ?? form.port === 443}
+                  onChange={(e) => upd("useTls", e.target.checked)}
+                />
+                {t("conn.s3Tls")}
+              </label>
               <p className="hint">{t("conn.s3Hint")}</p>
             </>
           )}

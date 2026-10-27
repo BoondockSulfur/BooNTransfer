@@ -468,6 +468,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "boon-transfer"
+version = "1.0.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "dirs 5.0.1",
+ "futures",
+ "futures-rustls",
+ "keyring",
+ "percent-encoding",
+ "quick-xml",
+ "reqwest",
+ "russh",
+ "russh-sftp",
+ "rustls",
+ "rusty-s3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "suppaftp",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-updater",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "uuid",
+ "webpki-roots 0.26.11",
+]
+
+[[package]]
 name = "brotli"
 version = "8.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2778,43 +2815,6 @@ name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
-
-[[package]]
-name = "linuxscp-client"
-version = "1.0.0"
-dependencies = [
- "async-trait",
- "base64 0.22.1",
- "dirs 5.0.1",
- "futures",
- "futures-rustls",
- "keyring",
- "percent-encoding",
- "quick-xml",
- "reqwest",
- "russh",
- "russh-sftp",
- "rustls",
- "rusty-s3",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "suppaftp",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-updater",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "uuid",
- "webpki-roots 0.26.11",
-]
 
 [[package]]
 name = "litemap"

@@ -54,6 +54,9 @@ pub struct SessionInfo {
     pub bucket: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub region: Option<String>,
+    /// S3 only: use https. `None` (older sessions) means https on port 443.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_tls: Option<bool>,
     /// Unix timestamp (seconds) of last successful use; drives "recent".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_used: Option<i64>,
@@ -75,22 +78,45 @@ fn config_path() -> PathBuf {
 impl Store {
     pub fn load() -> Self {
         let path = config_path();
-        let sessions = fs::read_to_string(&path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default();
+        let sessions = match fs::read_to_string(&path) {
+            Ok(text) => match serde_json::from_str(&text) {
+                Ok(sessions) => sessions,
+                Err(e) => {
+                    // Keep the unreadable file instead of overwriting it with
+                    // an empty list on the next save.
+                    let backup = path.with_extension(format!(
+                        "json.corrupt-{}",
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_secs())
+                            .unwrap_or(0)
+                    ));
+                    tracing::error!(
+                        "sessions.json is unreadable ({e}); moved to {}",
+                        backup.display()
+                    );
+                    let _ = fs::rename(&path, &backup);
+                    Vec::new()
+                }
+            },
+            Err(_) => Vec::new(),
+        };
         Store {
             path,
             sessions: Mutex::new(sessions),
         }
     }
 
+    /// Writes via a temp file + rename, so a crash never leaves a truncated
+    /// sessions.json behind.
     fn persist(&self, sessions: &[SessionInfo]) -> Result<()> {
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent)?;
         }
         let json = serde_json::to_string_pretty(sessions)?;
-        fs::write(&self.path, json)?;
+        let tmp = self.path.with_extension("json.tmp");
+        fs::write(&tmp, json)?;
+        fs::rename(&tmp, &self.path)?;
         Ok(())
     }
 
@@ -152,6 +178,7 @@ mod tests {
             local_dir: None,
             bucket: None,
             region: None,
+            use_tls: None,
             last_used: None,
         }
     }
@@ -171,7 +198,7 @@ mod tests {
     #[test]
     fn upsert_replaces_in_place() {
         let store = Store {
-            path: std::env::temp_dir().join("linuxscp-test-sessions.json"),
+            path: std::env::temp_dir().join("boon-transfer-test-sessions.json"),
             sessions: Mutex::new(vec![]),
         };
         store.upsert(sample("a")).unwrap();

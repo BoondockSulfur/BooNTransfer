@@ -7,7 +7,8 @@
 //! restarts it from that offset (reusing the same machinery as resume/retry).
 
 use crate::error::{AppError, Result};
-use crate::protocol::FileProvider;
+use crate::protocol::local::LocalProvider;
+use crate::protocol::{FileEntry, FileProvider};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -15,7 +16,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncSeekExt;
-use tokio::sync::Semaphore;
+use tokio::sync::{Mutex as AsyncMutex, Semaphore};
 use tokio_util::sync::CancellationToken;
 
 /// Active connections shared between the command layer and the queue. Values are
@@ -78,6 +79,9 @@ impl Control {
 struct Inner {
     items: StdMutex<Vec<TransferItem>>,
     controls: StdMutex<HashMap<String, Arc<Control>>>,
+    /// Held by a transfer's task while it runs, so a resume/retry never starts
+    /// while the previous run of the same item is still finishing its I/O.
+    run_locks: StdMutex<HashMap<String, Arc<AsyncMutex<()>>>>,
     connections: ConnMap,
     app: AppHandle,
     semaphore: Arc<Semaphore>,
@@ -94,6 +98,7 @@ impl Queue {
             inner: Arc::new(Inner {
                 items: StdMutex::new(Vec::new()),
                 controls: StdMutex::new(HashMap::new()),
+                run_locks: StdMutex::new(HashMap::new()),
                 connections,
                 app,
                 semaphore: Arc::new(Semaphore::new(MAX_CONCURRENT)),
@@ -174,6 +179,22 @@ impl Queue {
         self.emit_update();
     }
 
+    /// Records the offset a run actually starts from.
+    fn set_offset(&self, id: &str, offset: u64) {
+        if let Some(item) = self
+            .inner
+            .items
+            .lock()
+            .unwrap()
+            .iter_mut()
+            .find(|i| i.id == id)
+        {
+            item.offset = offset;
+            item.transferred = offset;
+        }
+        self.emit_update();
+    }
+
     /// Adds a file transfer and starts it (subject to the concurrency limit).
     #[allow(clippy::too_many_arguments)]
     pub fn enqueue(
@@ -206,15 +227,29 @@ impl Queue {
             .lock()
             .unwrap()
             .insert(id.clone(), Control::new());
+        self.inner
+            .run_locks
+            .lock()
+            .unwrap()
+            .insert(id.clone(), Arc::new(AsyncMutex::new(())));
         self.emit_update();
         self.spawn(id.clone());
         id
     }
 
+    fn status_of(&self, id: &str) -> Option<Status> {
+        self.get(id).map(|i| i.status)
+    }
+
     fn spawn(&self, id: String) {
         let queue = self.clone();
         let sem = self.inner.semaphore.clone();
+        let run_lock = self.inner.run_locks.lock().unwrap().get(&id).cloned();
         tauri::async_runtime::spawn(async move {
+            let _running = match run_lock {
+                Some(l) => l.lock_owned().await,
+                None => return,
+            };
             let _permit = match sem.acquire().await {
                 Ok(p) => p,
                 Err(_) => return,
@@ -227,7 +262,12 @@ impl Queue {
     fn restart(&self, id: &str) {
         let exists = {
             let mut items = self.inner.items.lock().unwrap();
-            if let Some(item) = items.iter_mut().find(|i| i.id == id) {
+            let restartable =
+                |s: Status| matches!(s, Status::Paused | Status::Failed | Status::Cancelled);
+            if let Some(item) = items
+                .iter_mut()
+                .find(|i| i.id == id && restartable(i.status))
+            {
                 item.status = Status::Queued;
                 item.transferred = item.offset;
                 item.error = None;
@@ -248,6 +288,9 @@ impl Queue {
     }
 
     pub fn pause(&self, id: &str) {
+        if !matches!(self.status_of(id), Some(Status::Queued | Status::Running)) {
+            return;
+        }
         if let Some(c) = self.inner.controls.lock().unwrap().get(id) {
             c.paused.store(true, Ordering::Relaxed);
             c.cancel.cancel();
@@ -263,6 +306,10 @@ impl Queue {
         if let Some(c) = self.inner.controls.lock().unwrap().get(id) {
             c.paused.store(false, Ordering::Relaxed);
             c.cancel.cancel();
+        }
+        // A paused item has no running task that would report the cancel.
+        if self.status_of(id) == Some(Status::Paused) {
+            self.set_status(id, Status::Cancelled, None);
         }
     }
 
@@ -281,6 +328,7 @@ impl Queue {
                 );
                 if finished {
                     controls.remove(&i.id);
+                    self.inner.run_locks.lock().unwrap().remove(&i.id);
                 }
                 !finished
             });
@@ -299,7 +347,10 @@ async fn run_transfer(queue: Queue, id: String) {
         None => return,
     };
     if control.cancel.is_cancelled() {
-        queue.set_status(&id, Status::Cancelled, None);
+        // Paused while still queued: stays paused at its offset.
+        if !control.paused.load(Ordering::Relaxed) {
+            queue.set_status(&id, Status::Cancelled, None);
+        }
         return;
     }
     let provider = match queue
@@ -319,8 +370,11 @@ async fn run_transfer(queue: Queue, id: String) {
 
     queue.set_status(&id, Status::Running, None);
 
-    let done = Arc::new(AtomicU64::new(item.offset));
-    let offset = item.offset;
+    let offset = resume_offset(provider.as_ref(), &item).await;
+    if offset != item.offset {
+        queue.set_offset(&id, offset);
+    }
+    let done = Arc::new(AtomicU64::new(offset));
     let result: Result<()> = {
         let done2 = done.clone();
         let queue2 = queue.clone();
@@ -370,7 +424,10 @@ async fn run_transfer(queue: Queue, id: String) {
     let final_done = done.load(Ordering::Relaxed);
     queue.update_progress(&id, final_done);
     match result {
-        Ok(()) => queue.set_status(&id, Status::Completed, None),
+        Ok(()) => {
+            preserve_mtime(provider.as_ref(), &item).await;
+            queue.set_status(&id, Status::Completed, None)
+        }
         Err(AppError::Cancelled) => {
             if control.paused.load(Ordering::Relaxed) {
                 queue.pause_at(&id, final_done);
@@ -379,6 +436,47 @@ async fn run_transfer(queue: Queue, id: String) {
             }
         }
         Err(e) => queue.set_status(&id, Status::Failed, Some(e.to_string())),
+    }
+}
+
+/// Where a resumed transfer really continues: the size of what already arrived
+/// at the destination, not the progress counter (which can run ahead of data
+/// that was written). Uploads to providers without resume restart at 0.
+async fn resume_offset(provider: &dyn FileProvider, item: &TransferItem) -> u64 {
+    if item.offset == 0 {
+        return 0;
+    }
+    let present = match item.direction {
+        Direction::Upload if !provider.supports_upload_resume() => return 0,
+        Direction::Upload => provider.stat(&item.remote_path).await.map(|e| e.size),
+        Direction::Download => tokio::fs::metadata(&item.local_path)
+            .await
+            .map(|m| m.len())
+            .map_err(Into::into),
+    };
+    present.unwrap_or(0).min(item.size)
+}
+
+/// Copies the source's modification time to the destination (best effort), so
+/// directory sync does not see a freshly transferred file as "newer".
+async fn preserve_mtime(provider: &dyn FileProvider, item: &TransferItem) {
+    let local = LocalProvider::new();
+    let res = match item.direction {
+        Direction::Upload => match local.stat(&item.local_path).await {
+            Ok(FileEntry {
+                modified: Some(t), ..
+            }) => provider.set_mtime(&item.remote_path, t).await,
+            other => other.map(|_| ()),
+        },
+        Direction::Download => match provider.stat(&item.remote_path).await {
+            Ok(FileEntry {
+                modified: Some(t), ..
+            }) => local.set_mtime(&item.local_path, t).await,
+            other => other.map(|_| ()),
+        },
+    };
+    if let Err(e) = res {
+        tracing::debug!("could not preserve mtime for {}: {e}", item.name);
     }
 }
 

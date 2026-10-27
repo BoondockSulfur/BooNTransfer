@@ -37,6 +37,9 @@ export default function EditorModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  // Textareas normalise line breaks to LF; remember CRLF files so saving
+  // writes them back unchanged instead of converting the whole file.
+  const crlfRef = useRef(false);
   const dirty = content !== original;
 
   // Keep the latest dirty flag / translator reachable from the (stable) window
@@ -51,7 +54,9 @@ export default function EditorModal({
       setLoading(true);
       setError(undefined);
       try {
-        const text = await api.readText(connectionId, path, isLocal);
+        const raw = await api.readText(connectionId, path, isLocal);
+        crlfRef.current = raw.includes("\r\n");
+        const text = raw.replace(/\r\n/g, "\n");
         setContent(text);
         setOriginal(text);
       } catch (e) {
@@ -68,7 +73,8 @@ export default function EditorModal({
     setSaving(true);
     setError(undefined);
     try {
-      await api.writeText(connectionId, path, isLocal, content);
+      const out = crlfRef.current ? content.replace(/\n/g, "\r\n") : content;
+      await api.writeText(connectionId, path, isLocal, out);
       setOriginal(content);
       dirtyRef.current = false; // reflect immediately for the close guard
       onSaved(isLocal);
@@ -79,16 +85,26 @@ export default function EditorModal({
     }
   };
 
-  const close = () => {
+  const requestClose = async () => {
     if (windowed) {
       // Closing the window fires onCloseRequested below, which does the
       // unsaved-changes guard for both this button and the native title bar.
       onClose();
       return;
     }
-    if (dirty && !window.confirm(t("editor.discard"))) return;
+    if (
+      dirty &&
+      !(await ask(t("editor.discard"), {
+        title: name,
+        kind: "warning",
+        okLabel: t("editor.discardOk"),
+        cancelLabel: t("editor.keepEditing"),
+      }))
+    )
+      return;
     onClose();
   };
+  const close = () => void requestClose();
   const dialogRef = useDialog(close);
 
   // In a standalone window, put the cursor straight into the text.

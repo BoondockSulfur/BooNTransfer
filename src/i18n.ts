@@ -85,7 +85,10 @@ const de: Dict = {
   "conn.bucket": "Bucket",
   "conn.region": "Region",
   "conn.s3Hint":
-    "S3: Host = Endpoint, Benutzer = Access Key, Passwort = Secret Key. Port 443 = HTTPS, sonst HTTP (z. B. MinIO :9000).",
+    "S3: Host = Endpoint, Benutzer = Access Key, Passwort = Secret Key. HTTPS nur abwählen, wenn der Endpoint kein TLS spricht (z. B. lokales MinIO).",
+  "conn.s3Tls": "HTTPS verwenden",
+  "conn.scpHint":
+    "SCP-Sitzungen übertragen über SFTP (schneller, mit Fortsetzen). Der Server braucht das SFTP-Subsystem.",
   "conn.folder": "Ordner/Favorit",
   "conn.homePlaceholder": "(Home)",
   "conn.unchanged": "unverändert lassen = leer",
@@ -269,7 +272,10 @@ const en: Dict = {
   "conn.bucket": "Bucket",
   "conn.region": "Region",
   "conn.s3Hint":
-    "S3: host = endpoint, user = access key, password = secret key. Port 443 = HTTPS, otherwise HTTP (e.g. MinIO :9000).",
+    "S3: host = endpoint, user = access key, password = secret key. Only untick HTTPS if the endpoint does not speak TLS (e.g. local MinIO).",
+  "conn.s3Tls": "Use HTTPS",
+  "conn.scpHint":
+    "SCP sessions transfer via SFTP (faster, resumable). The server needs the SFTP subsystem.",
   "conn.folder": "Folder/favourite",
   "conn.homePlaceholder": "(home)",
   "conn.unchanged": "leave empty = unchanged",

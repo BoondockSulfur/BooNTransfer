@@ -1,8 +1,8 @@
 //! End-to-end smoke test of the async FtpProvider against a real FTP(S) server.
 //!   cargo run --example ftp_smoke -- 127.0.0.1 21 tester testpass /ftp/tester [tls]
 
-use linuxscp_lib::protocol::ftp::FtpProvider;
-use linuxscp_lib::protocol::FileProvider;
+use boon_transfer_lib::protocol::ftp::FtpProvider;
+use boon_transfer_lib::protocol::FileProvider;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]

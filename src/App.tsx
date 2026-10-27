@@ -33,6 +33,7 @@ import { openDetached, openEditorWindow, openTerminalWindow } from "./windows";
 type TransferDir = "upload" | "download";
 
 interface ConflictState {
+  connectionId: string;
   direction: TransferDir;
   dest: string;
   planned: PlannedFile[];
@@ -196,11 +197,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, tabs.length]);
 
-  const doConnect = async (sessionId: string, trust = false) => {
+  const doConnect = async (sessionId: string, trustedFingerprint?: string) => {
     setConnecting(true);
     setStatus(tr("status.connecting"));
     try {
-      const result = await api.connect(sessionId, trust);
+      const result = await api.connect(sessionId, trustedFingerprint);
       const session = sessions.find((s) => s.id === sessionId);
       const title = session
         ? session.name
@@ -258,12 +259,12 @@ export default function App() {
   };
 
   const enqueueResolved = async (
+    connectionId: string,
     direction: TransferDir,
     dest: string,
     planned: PlannedFile[],
     conflictPolicy: ConflictPolicy,
   ) => {
-    if (!connection) return;
     // Files that don't exist yet always "overwrite" (= create); existing files
     // use the policy chosen in the dialog. The backend drops "skip" entries.
     const resolved: ResolvedFile[] = planned.map((f) => ({
@@ -271,7 +272,7 @@ export default function App() {
       policy: f.exists ? conflictPolicy : "overwrite",
     }));
     const n = await api.enqueueTransfers(
-      connection.connectionId,
+      connectionId,
       direction,
       dest,
       resolved,
@@ -284,12 +285,21 @@ export default function App() {
     );
   };
 
+  /**
+   * `sourceConnection` is set when a detached remote pane asks for a download:
+   * its paths belong to that connection, not necessarily to the active tab.
+   */
   const handleTransfer = async (
     source: PaneKind,
     paths: string[],
     destDir?: string,
+    sourceConnection?: string,
   ) => {
-    if (!connection) {
+    const connectionId =
+      source === "remote" && sourceConnection
+        ? sourceConnection
+        : connection?.connectionId;
+    if (!connectionId) {
       setStatus(tr("status.noConnection"), "error");
       return;
     }
@@ -303,7 +313,7 @@ export default function App() {
     if (!dest) return;
     try {
       const planned = await api.planTransfers(
-        connection.connectionId,
+        connectionId,
         direction,
         paths,
         dest,
@@ -313,9 +323,15 @@ export default function App() {
         return;
       }
       if (planned.some((f) => f.exists)) {
-        setConflict({ direction, dest, planned });
+        setConflict({ connectionId, direction, dest, planned });
       } else {
-        await enqueueResolved(direction, dest, planned, "overwrite");
+        await enqueueResolved(
+          connectionId,
+          direction,
+          dest,
+          planned,
+          "overwrite",
+        );
       }
     } catch (e) {
       setStatus(isAppError(e) ? e.message : String(e), "error");
@@ -327,7 +343,12 @@ export default function App() {
   handleTransferRef.current = handleTransfer;
   useEffect(() => {
     const u = onTransferRequest((req) =>
-      handleTransferRef.current(req.source, req.paths),
+      handleTransferRef.current(
+        req.source,
+        req.paths,
+        undefined,
+        req.connectionId ?? undefined,
+      ),
     );
     return () => void u.then((f) => f());
   }, []);
@@ -610,6 +631,7 @@ export default function App() {
           files={conflict.planned}
           onResolve={(policy) => {
             void enqueueResolved(
+              conflict.connectionId,
               conflict.direction,
               conflict.dest,
               conflict.planned,
@@ -626,7 +648,9 @@ export default function App() {
           fingerprint={hostKey.fingerprint}
           keyType={hostKey.keyType}
           changed={hostKey.changed}
-          onAccept={() => void doConnect(hostKey.sessionId, true)}
+          onAccept={() =>
+            void doConnect(hostKey.sessionId, hostKey.fingerprint)
+          }
           onReject={() => setHostKey(null)}
         />
       )}

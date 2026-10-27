@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { api } from "../api";
 import { useT } from "../i18n";
 import { useStore } from "../state/store";
@@ -241,7 +242,11 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
   const doDelete = async () => {
     const names = [...selected];
     if (names.length === 0) return;
-    if (!window.confirm(t("pane.confirmDelete", { n: names.length }))) return;
+    // Tauri's native dialog: window.confirm is unreliable in the webview.
+    const ok = await ask(t("pane.confirmDelete", { n: names.length }), {
+      kind: "warning",
+    });
+    if (!ok) return;
     for (const name of names) {
       const entry = entries.find((x) => x.name === name);
       const target = posixJoin(path, name);
@@ -274,7 +279,9 @@ const FilePane = forwardRef<PaneHandle, Props>(function FilePane(props, ref) {
     const current = (entry.permissions ?? 0o644).toString(8).padStart(3, "0");
     const input = window.prompt(t("pane.promptChmod"), current);
     if (!input) return;
-    const mode = parseInt(input, 8);
+    const mode = /^[0-7]{1,4}$/.test(input.trim())
+      ? parseInt(input.trim(), 8)
+      : NaN;
     if (Number.isNaN(mode)) {
       onStatus(t("pane.badOctal"), "error");
       return;

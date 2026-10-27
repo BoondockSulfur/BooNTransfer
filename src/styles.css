@@ -745,6 +745,15 @@ select option {
 .conn-form .port input {
   width: 84px;
 }
+.conn-form label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.conn-form label.check input {
+  width: auto;
+}
 .conn-form .hint {
   color: var(--muted);
   font-size: 12px;

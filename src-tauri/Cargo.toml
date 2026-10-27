@@ -1,14 +1,14 @@
 [package]
-name = "linuxscp-client"
+name = "boon-transfer"
 version = "1.0.0"
-description = "BooN Transfer — dual-pane SFTP/SCP/FTP/FTPS file transfer client"
+description = "BooN Transfer — dual-pane SFTP/SCP/FTP/FTPS/WebDAV/S3 file transfer client"
 authors = ["BoondockSulfur"]
 license = "MIT"
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "linuxscp_lib"
+name = "boon_transfer_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 # Explicit binary name so the installed executable is "boon-transfer"

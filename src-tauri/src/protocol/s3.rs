@@ -4,19 +4,33 @@
 //! One connection maps to one bucket; POSIX paths become object keys. S3 has no
 //! real directories — listings use `prefix` + `delimiter=/`, and "folders" are
 //! zero-byte `name/` marker objects. No rename (copy + delete); no chmod.
+//! Uploads stream as one PUT up to `MULTIPART_THRESHOLD`, above that as a
+//! multipart upload (single PUTs are capped at 5 GB by S3).
 
-use super::{FileEntry, FileProvider, ProgressFn};
+use super::{http, FileEntry, FileProvider, ProgressFn};
 use crate::error::{AppError, Result};
-use futures::StreamExt;
+use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use reqwest::Client;
-use rusty_s3::actions::ListObjectsV2;
+use rusty_s3::actions::{CreateMultipartUpload, ListObjectsV2};
 use rusty_s3::{Bucket, Credentials, S3Action, UrlStyle};
 use std::time::Duration;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 use tokio_util::sync::CancellationToken;
 
 const CHUNK: usize = 128 * 1024;
 const SIGN_TTL: Duration = Duration::from_secs(300);
+const MULTIPART_THRESHOLD: u64 = 64 * 1024 * 1024;
+const MIN_PART: u64 = 16 * 1024 * 1024;
+const MAX_PARTS: u64 = 10_000;
+
+/// Characters kept literal in `x-amz-copy-source` (key path separators and
+/// RFC 3986 unreserved characters); everything else is percent-encoded.
+const COPY_SOURCE: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'/')
+    .remove(b'-')
+    .remove(b'_')
+    .remove(b'.')
+    .remove(b'~');
 
 pub struct S3Provider {
     bucket: Bucket,
@@ -74,7 +88,7 @@ impl S3Provider {
         let p = S3Provider {
             bucket,
             creds,
-            client: Client::builder().build().map_err(serr)?,
+            client: http::client().map_err(serr)?,
         };
         // Validate credentials/bucket up front.
         p.list_dir("/").await?;
@@ -142,6 +156,10 @@ fn entry(name: String, is_dir: bool, size: u64) -> FileEntry {
 impl FileProvider for S3Provider {
     fn kind(&self) -> &'static str {
         "s3"
+    }
+
+    fn supports_upload_resume(&self) -> bool {
+        false
     }
 
     async fn home_dir(&self) -> Result<String> {
@@ -279,11 +297,18 @@ impl FileProvider for S3Provider {
         // No native rename: server-side copy, then delete the source.
         let src_key = key_of(from);
         let dst_key = key_of(to);
-        let copy_source = format!("/{}/{}", self.bucket.name(), src_key);
-        let url = self
-            .bucket
-            .put_object(Some(&self.creds), &dst_key)
-            .sign(SIGN_TTL);
+        let copy_source = format!(
+            "/{}/{}",
+            self.bucket.name(),
+            utf8_percent_encode(&src_key, COPY_SOURCE)
+        );
+        // x-amz-* headers must be part of the signature (strict S3 servers,
+        // AWS included, reject unsigned ones in a presigned request).
+        let mut action = self.bucket.put_object(Some(&self.creds), &dst_key);
+        action
+            .headers_mut()
+            .insert("x-amz-copy-source", copy_source.clone());
+        let url = action.sign(SIGN_TTL);
         self.client
             .put(url)
             .header("x-amz-copy-source", copy_source)
@@ -322,16 +347,7 @@ impl FileProvider for S3Provider {
             .map_err(serr)?
             .error_for_status()
             .map_err(serr)?;
-        let mut stream = resp.bytes_stream();
-        while let Some(chunk) = stream.next().await {
-            if cancel.is_cancelled() {
-                return Err(AppError::Cancelled);
-            }
-            let chunk = chunk.map_err(serr)?;
-            dst.write_all(&chunk).await?;
-            progress(chunk.len() as u64);
-        }
-        Ok(())
+        http::receive(resp, dst, offset, progress, cancel).await
     }
 
     async fn upload_from(
@@ -346,32 +362,148 @@ impl FileProvider for S3Provider {
         if offset > 0 {
             return Err(AppError::other("S3-Upload unterstützt hier kein Resume"));
         }
-        let mut buf: Vec<u8> = Vec::with_capacity(size as usize);
-        let mut chunk = vec![0u8; CHUNK];
-        loop {
-            if cancel.is_cancelled() {
-                return Err(AppError::Cancelled);
-            }
-            let n = src.read(&mut chunk).await?;
-            if n == 0 {
-                break;
-            }
-            buf.extend_from_slice(&chunk[..n]);
-            progress(n as u64);
-        }
         let key = key_of(remote);
+        if size > MULTIPART_THRESHOLD {
+            return self
+                .upload_multipart(src, &key, size, progress, cancel)
+                .await;
+        }
         let url = self
             .bucket
             .put_object(Some(&self.creds), &key)
             .sign(SIGN_TTL);
-        self.client
-            .put(url)
-            .body(buf)
+        http::send_streaming(self.client.put(url), src, size, progress, cancel)
+            .await?
+            .error_for_status()
+            .map_err(serr)?;
+        Ok(())
+    }
+}
+
+impl S3Provider {
+    /// Multipart upload: parts of at least 16 MiB (more for huge files, S3
+    /// allows 10 000 parts). An unfinished upload is aborted so no orphaned
+    /// parts keep costing storage.
+    async fn upload_multipart(
+        &self,
+        src: &mut (dyn AsyncRead + Unpin + Send),
+        key: &str,
+        size: u64,
+        progress: &mut ProgressFn<'_>,
+        cancel: &CancellationToken,
+    ) -> Result<()> {
+        let url = self
+            .bucket
+            .create_multipart_upload(Some(&self.creds), key)
+            .sign(SIGN_TTL);
+        let text = self
+            .client
+            .post(url)
+            .send()
+            .await
+            .map_err(serr)?
+            .error_for_status()
+            .map_err(serr)?
+            .text()
+            .await
+            .map_err(serr)?;
+        let upload_id = CreateMultipartUpload::parse_response(&text)
+            .map_err(serr)?
+            .upload_id()
+            .to_string();
+
+        let res = self
+            .upload_parts(src, key, &upload_id, size, progress, cancel)
+            .await;
+        if res.is_err() {
+            let url = self
+                .bucket
+                .abort_multipart_upload(Some(&self.creds), key, &upload_id)
+                .sign(SIGN_TTL);
+            let _ = self.client.delete(url).send().await;
+        }
+        res
+    }
+
+    async fn upload_parts(
+        &self,
+        src: &mut (dyn AsyncRead + Unpin + Send),
+        key: &str,
+        upload_id: &str,
+        size: u64,
+        progress: &mut ProgressFn<'_>,
+        cancel: &CancellationToken,
+    ) -> Result<()> {
+        let part_size = MIN_PART.max(size.div_ceil(MAX_PARTS)) as usize;
+        let mut etags: Vec<String> = Vec::new();
+        let mut chunk = vec![0u8; CHUNK];
+        loop {
+            let mut part: Vec<u8> = Vec::with_capacity(part_size);
+            while part.len() < part_size {
+                if cancel.is_cancelled() {
+                    return Err(AppError::Cancelled);
+                }
+                let want = (part_size - part.len()).min(CHUNK);
+                let n = src.read(&mut chunk[..want]).await?;
+                if n == 0 {
+                    break;
+                }
+                part.extend_from_slice(&chunk[..n]);
+            }
+            if part.is_empty() {
+                break;
+            }
+            let part_len = part.len();
+            let number = u16::try_from(etags.len() + 1)
+                .map_err(|_| AppError::other("S3: zu viele Teile"))?;
+            let url = self
+                .bucket
+                .upload_part(Some(&self.creds), key, number, upload_id)
+                .sign(SIGN_TTL);
+            let resp = self
+                .client
+                .put(url)
+                .body(part)
+                .send()
+                .await
+                .map_err(serr)?
+                .error_for_status()
+                .map_err(serr)?;
+            let etag = resp
+                .headers()
+                .get("etag")
+                .and_then(|v| v.to_str().ok())
+                .ok_or_else(|| AppError::other("S3: ETag fehlt in der Antwort"))?
+                .to_string();
+            etags.push(etag);
+            progress(part_len as u64);
+            if part_len < part_size {
+                break;
+            }
+        }
+
+        let action = self.bucket.complete_multipart_upload(
+            Some(&self.creds),
+            key,
+            upload_id,
+            etags.iter().map(String::as_str),
+        );
+        let url = action.sign(SIGN_TTL);
+        let body = action.body();
+        let resp = self
+            .client
+            .post(url)
+            .body(body)
             .send()
             .await
             .map_err(serr)?
             .error_for_status()
             .map_err(serr)?;
+        // S3 can report a failed completion inside a 200 response.
+        let text = resp.text().await.map_err(serr)?;
+        if text.contains("<Error>") {
+            return Err(AppError::other(format!("S3: {text}")));
+        }
         Ok(())
     }
 }

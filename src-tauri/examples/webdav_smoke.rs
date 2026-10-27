@@ -1,8 +1,8 @@
 //! End-to-end smoke test of WebdavProvider against a real WebDAV server.
 //!   cargo run --example webdav_smoke -- 127.0.0.1 8088 tester testpass /
 
-use linuxscp_lib::protocol::webdav::WebdavProvider;
-use linuxscp_lib::protocol::FileProvider;
+use boon_transfer_lib::protocol::webdav::WebdavProvider;
+use boon_transfer_lib::protocol::FileProvider;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]

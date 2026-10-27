@@ -2,8 +2,9 @@
 //! Run with a server available, e.g. the benchmark container:
 //!   cargo run --example smoke -- 127.0.0.1 2223 tester testpass /config
 
-use linuxscp_lib::protocol::sftp::{AuthMethod, ConnectParams, SftpProvider};
-use linuxscp_lib::protocol::FileProvider;
+use boon_transfer_lib::error::AppError;
+use boon_transfer_lib::protocol::sftp::{AuthMethod, ConnectParams, SftpProvider};
+use boon_transfer_lib::protocol::FileProvider;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]
@@ -16,22 +17,29 @@ async fn main() {
     let dir = a.get(5).cloned().unwrap_or_else(|| "/config".into());
 
     // pass == "agent" → use the SSH agent (SSH_AUTH_SOCK); otherwise password.
-    let auth = if pass == "agent" {
-        AuthMethod::Agent
-    } else {
-        AuthMethod::Password(pass)
+    let params = |trusted_fingerprint: Option<String>| ConnectParams {
+        host: host.clone(),
+        port,
+        username: user.clone(),
+        auth: if pass == "agent" {
+            AuthMethod::Agent
+        } else {
+            AuthMethod::Password(pass.clone())
+        },
+        trusted_fingerprint,
     };
 
-    let p = SftpProvider::connect(ConnectParams {
-        host,
-        port,
-        username: user,
-        auth,
-        trust_host_key: true,
-        use_scp: false,
-    })
-    .await
-    .expect("connect");
+    // Test server: accept its host key after the first (rejected) attempt.
+    let p = match SftpProvider::connect(params(None)).await {
+        Ok(p) => p,
+        Err(AppError::HostKeyVerification { fingerprint, .. }) => {
+            println!("  host key {fingerprint} accepted for the test");
+            SftpProvider::connect(params(Some(fingerprint)))
+                .await
+                .expect("connect")
+        }
+        Err(e) => panic!("connect: {e}"),
+    };
 
     println!("✓ connect + auth");
     println!("  home      = {}", p.home_dir().await.expect("home"));

@@ -27,6 +27,8 @@ export interface SessionInfo {
   localDir?: string | null;
   bucket?: string | null;
   region?: string | null;
+  /** S3 only: https. Unset (older sessions) means https on port 443. */
+  useTls?: boolean | null;
   lastUsed?: number | null;
 }
 

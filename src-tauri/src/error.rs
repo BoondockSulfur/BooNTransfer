@@ -26,7 +26,8 @@ pub enum AppError {
     Serde(#[from] serde_json::Error),
 
     /// The remote host key is unknown or has changed. The UI must show a
-    /// confirmation dialog and retry the connection with `trust_host_key = true`.
+    /// confirmation dialog and retry the connection with the confirmed
+    /// fingerprint as `trusted_fingerprint`.
     #[error("host key verification required")]
     HostKeyVerification {
         fingerprint: String,

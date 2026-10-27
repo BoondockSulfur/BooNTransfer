@@ -13,8 +13,14 @@ use std::sync::{Arc, Mutex as StdMutex};
 use tauri::Manager;
 use transfer::{ConnMap, Queue};
 
+/// An open shell and the connection it belongs to.
+pub struct TermEntry {
+    pub connection_id: String,
+    pub handle: Arc<dyn Terminal>,
+}
+
 /// Active interactive shells, keyed by a frontend-generated terminal id.
-pub type TermMap = Arc<StdMutex<HashMap<String, Arc<dyn Terminal>>>>;
+pub type TermMap = Arc<StdMutex<HashMap<String, TermEntry>>>;
 
 /// Application-wide state managed by Tauri and shared with every command.
 pub struct AppState {

@@ -45,16 +45,27 @@ export default function TerminalView({
     const id = crypto.randomUUID();
     const enc = new TextEncoder();
     const unlisteners: Array<() => void> = [];
+    // The view can unmount while the shell is still being opened; the async
+    // setup then cleans up after itself instead of leaving a shell behind.
+    let disposed = false;
 
     void (async () => {
       // Subscribe before opening so no early output is missed.
-      unlisteners.push(await onTerminalOutput(id, (data) => term.write(data)));
-      unlisteners.push(
-        await onTerminalExit(id, () => {
-          term.write("\r\n\x1b[90m— session closed —\x1b[0m\r\n");
-        }),
-      );
+      const offOutput = await onTerminalOutput(id, (data) => term.write(data));
+      const offExit = await onTerminalExit(id, () => {
+        term.write("\r\n\x1b[90m— session closed —\x1b[0m\r\n");
+      });
+      if (disposed) {
+        offOutput();
+        offExit();
+        return;
+      }
+      unlisteners.push(offOutput, offExit);
       await api.terminalOpen(connectionId, id, term.cols, term.rows);
+      if (disposed) {
+        void api.terminalClose(id);
+        return;
+      }
       term.focus();
     })();
 
@@ -74,6 +85,7 @@ export default function TerminalView({
     ro.observe(el);
 
     return () => {
+      disposed = true;
       dData.dispose();
       dResize.dispose();
       ro.disconnect();

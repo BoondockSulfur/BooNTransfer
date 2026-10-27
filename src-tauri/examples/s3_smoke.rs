@@ -1,8 +1,8 @@
 //! End-to-end smoke test of S3Provider against a real S3 server (MinIO).
 //!   cargo run --example s3_smoke -- 127.0.0.1 9000 minioadmin minioadmin boon-test us-east-1
 
-use linuxscp_lib::protocol::s3::S3Provider;
-use linuxscp_lib::protocol::FileProvider;
+use boon_transfer_lib::protocol::s3::S3Provider;
+use boon_transfer_lib::protocol::FileProvider;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]

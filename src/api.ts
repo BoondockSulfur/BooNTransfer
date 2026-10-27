@@ -22,8 +22,10 @@ export const api = {
   deleteSession: (id: string) => invoke<void>("delete_session", { id }),
 
   // connection
-  connect: (sessionId: string, trustHostKey?: boolean) =>
-    invoke<ConnectResult>("connect", { sessionId, trustHostKey }),
+  /** `trustedFingerprint`: the host key the user just confirmed (only that
+   * exact key is accepted and stored). */
+  connect: (sessionId: string, trustedFingerprint?: string) =>
+    invoke<ConnectResult>("connect", { sessionId, trustedFingerprint }),
   disconnect: (connectionId: string) =>
     invoke<void>("disconnect", { connectionId }),
 

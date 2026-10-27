@@ -129,7 +129,7 @@ pub async fn save_session(
 
 #[tauri::command]
 pub async fn delete_session(state: State<'_, AppState>, id: String) -> Result<()> {
-    state.connections.lock().unwrap().remove(&id);
+    // Open tabs of this session keep their live connection until closed.
     let id_c = id.clone();
     blocking(move || secrets::delete_all(&id_c)).await?;
     state.sessions.delete(&id)?;
@@ -158,14 +158,13 @@ async fn secret(id: &str, kind: &'static str) -> Result<Option<String>> {
 pub async fn connect(
     state: State<'_, AppState>,
     session_id: String,
-    trust_host_key: Option<bool>,
+    trusted_fingerprint: Option<String>,
 ) -> Result<ConnectResult> {
     let sess = state
         .sessions
         .get(&session_id)
         .ok_or_else(|| AppError::other("session not found"))?;
 
-    let trust = trust_host_key.unwrap_or(false);
     let mut remote_dir = sess.remote_dir.clone();
     let local_dir = sess.local_dir.clone();
 
@@ -193,8 +192,7 @@ pub async fn connect(
                 port: sess.port,
                 username: sess.username.clone(),
                 auth,
-                trust_host_key: trust,
-                use_scp: sess.protocol == Protocol::Scp,
+                trusted_fingerprint,
             };
             Arc::new(SftpProvider::connect(params).await?)
         }
@@ -243,7 +241,8 @@ pub async fn connect(
                 sess.port,
                 &sess.username,
                 &secret,
-                sess.port == 443, // https on 443, plain http otherwise (e.g. MinIO :9000)
+                // Older sessions have no explicit setting: https only on 443.
+                sess.use_tls.unwrap_or(sess.port == 443),
                 &bucket,
                 &region,
             )
@@ -273,8 +272,21 @@ pub async fn connect(
 }
 
 #[tauri::command]
-pub fn disconnect(state: State<'_, AppState>, connection_id: String) -> Result<()> {
+pub async fn disconnect(state: State<'_, AppState>, connection_id: String) -> Result<()> {
     state.connections.lock().unwrap().remove(&connection_id);
+    // Shells keep the SSH session alive, so close the ones of this connection.
+    let shells: Vec<_> = {
+        let mut terms = state.terminals.lock().unwrap();
+        let ids: Vec<String> = terms
+            .iter()
+            .filter(|(_, t)| t.connection_id == connection_id)
+            .map(|(id, _)| id.clone())
+            .collect();
+        ids.into_iter().filter_map(|id| terms.remove(&id)).collect()
+    };
+    for t in shells {
+        let _ = t.handle.close().await;
+    }
     Ok(())
 }
 
@@ -329,7 +341,15 @@ pub async fn list_remote(
     connection_id: String,
     path: String,
 ) -> Result<Vec<FileEntry>> {
-    conn(&state, &connection_id)?.list_dir(&path).await
+    let mut entries = conn(&state, &connection_id)?.list_dir(&path).await?;
+    entries.retain(|e| {
+        let ok = protocol::is_safe_name(&e.name);
+        if !ok {
+            tracing::warn!("ignoring unsafe remote entry name {:?} in {path}", e.name);
+        }
+        ok
+    });
+    Ok(entries)
 }
 
 #[tauri::command]
@@ -455,6 +475,11 @@ fn walk_remote<'a>(
 ) -> Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
     Box::pin(async move {
         for entry in provider.list_dir(remote_dir).await? {
+            // Server-supplied names become local paths: never let one escape.
+            if !protocol::is_safe_name(&entry.name) {
+                tracing::warn!("skipping unsafe remote name {:?}", entry.name);
+                continue;
+            }
             let child_remote = protocol::posix_join(remote_dir, &entry.name);
             let child_local = local_join(local_dir, &entry.name);
             if entry.is_symlink {
@@ -754,7 +779,7 @@ fn build_remote_map<'a>(
 ) -> Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>> {
     Box::pin(async move {
         for e in provider.list_dir(root).await? {
-            if e.is_symlink {
+            if e.is_symlink || !protocol::is_safe_name(&e.name) {
                 continue;
             }
             let rel = if prefix.is_empty() {
@@ -789,6 +814,9 @@ pub async fn plan_sync(
 
     let want_up = direction == "upload" || direction == "both";
     let want_down = direction == "download" || direction == "both";
+    // Timestamps only decide when the remote side keeps them on upload;
+    // otherwise every uploaded file would look "newer" on the next run.
+    let trust_mtime = p.can_set_mtime();
 
     let mut keys: std::collections::HashSet<String> = std::collections::HashSet::new();
     keys.extend(local.keys().cloned());
@@ -800,10 +828,12 @@ pub async fn plan_sync(
         let r = remote.get(&rel);
         let (dir, reason, size, local_path, remote_path) = match (l, r) {
             (Some((la, ls, lm)), Some((ra, rs, rm))) => {
-                if ls == rs && (lm - rm).abs() <= 2 {
+                let comparable = trust_mtime && *lm > 0 && *rm > 0;
+                let same_time = !comparable || (lm - rm).abs() <= 2;
+                if ls == rs && same_time {
                     continue;
                 }
-                let up = if ls != rs { lm >= rm } else { lm > rm };
+                let up = if same_time { want_up } else { lm > rm };
                 let reason = if ls != rs { "size" } else { "newer" };
                 if up {
                     (
@@ -966,14 +996,16 @@ pub async fn terminal_open(
     let provider = conn(&state, &connection_id)?;
     let session = provider.open_terminal(cols, rows).await?;
     let mut output = session.output;
-    state
-        .terminals
-        .lock()
-        .unwrap()
-        .insert(terminal_id.clone(), Arc::from(session.handle));
+    state.terminals.lock().unwrap().insert(
+        terminal_id.clone(),
+        crate::TermEntry {
+            connection_id,
+            handle: Arc::from(session.handle),
+        },
+    );
     // Forward shell output to the frontend as per-terminal events.
     tauri::async_runtime::spawn(async move {
-        use tauri::Emitter;
+        use tauri::{Emitter, Manager};
         while let Some(ev) = output.recv().await {
             match ev {
                 protocol::TerminalEvent::Data(d) => {
@@ -985,6 +1017,11 @@ pub async fn terminal_open(
                 }
             }
         }
+        app.state::<AppState>()
+            .terminals
+            .lock()
+            .unwrap()
+            .remove(&terminal_id);
     });
     Ok(())
 }
@@ -995,7 +1032,12 @@ pub async fn terminal_write(
     terminal_id: String,
     data: Vec<u8>,
 ) -> Result<()> {
-    let term = state.terminals.lock().unwrap().get(&terminal_id).cloned();
+    let term = state
+        .terminals
+        .lock()
+        .unwrap()
+        .get(&terminal_id)
+        .map(|t| t.handle.clone());
     if let Some(t) = term {
         t.write(&data).await?;
     }
@@ -1009,7 +1051,12 @@ pub async fn terminal_resize(
     cols: u32,
     rows: u32,
 ) -> Result<()> {
-    let term = state.terminals.lock().unwrap().get(&terminal_id).cloned();
+    let term = state
+        .terminals
+        .lock()
+        .unwrap()
+        .get(&terminal_id)
+        .map(|t| t.handle.clone());
     if let Some(t) = term {
         t.resize(cols, rows).await?;
     }
@@ -1020,7 +1067,7 @@ pub async fn terminal_resize(
 pub async fn terminal_close(state: State<'_, AppState>, terminal_id: String) -> Result<()> {
     let term = state.terminals.lock().unwrap().remove(&terminal_id);
     if let Some(t) = term {
-        t.close().await?;
+        t.handle.close().await?;
     }
     Ok(())
 }

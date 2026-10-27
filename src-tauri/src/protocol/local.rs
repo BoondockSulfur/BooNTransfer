@@ -5,7 +5,7 @@ use crate::error::{AppError, Result};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::time::UNIX_EPOCH;
+use std::time::{Duration, UNIX_EPOCH};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt};
 use tokio_util::sync::CancellationToken;
 
@@ -65,6 +65,22 @@ pub async fn copy_with_progress(
 impl FileProvider for LocalProvider {
     fn kind(&self) -> &'static str {
         "local"
+    }
+
+    fn can_set_mtime(&self) -> bool {
+        true
+    }
+
+    async fn set_mtime(&self, path: &str, mtime: i64) -> Result<()> {
+        let path = path.to_string();
+        let t = UNIX_EPOCH + Duration::from_secs(mtime.max(0) as u64);
+        tokio::task::spawn_blocking(move || {
+            let times = std::fs::FileTimes::new().set_accessed(t).set_modified(t);
+            std::fs::File::open(&path)?.set_times(times)
+        })
+        .await
+        .map_err(|e| AppError::other(e.to_string()))??;
+        Ok(())
     }
 
     async fn home_dir(&self) -> Result<String> {
