@@ -24,6 +24,8 @@ pub enum TerminalEvent {
 
 /// Handle to drive an interactive shell (write input, resize, close).
 #[async_trait::async_trait]
+// async-trait emits `#[must_use]` on its boxed futures; clippy ≥ 1.99 flags that.
+#[allow(clippy::double_must_use)]
 pub trait Terminal: Send + Sync {
     async fn write(&self, data: &[u8]) -> Result<()>;
     async fn resize(&self, cols: u32, rows: u32) -> Result<()>;
@@ -59,6 +61,8 @@ pub type ProgressFn<'a> = dyn FnMut(u64) + Send + 'a;
 /// take `&self`) and shared as `Arc<dyn FileProvider>`. Nothing blocks the UI —
 /// blocking backends (keyring, FTP) run their work on `spawn_blocking`.
 #[async_trait::async_trait]
+// async-trait emits `#[must_use]` on its boxed futures; clippy ≥ 1.99 flags that.
+#[allow(clippy::double_must_use)]
 pub trait FileProvider: Send + Sync {
     fn kind(&self) -> &'static str;
 
