@@ -1,6 +1,6 @@
 [package]
 name = "boon-transfer"
-version = "1.0.0"
+version = "1.0.1"
 description = "BooN Transfer — dual-pane SFTP/SCP/FTP/FTPS/WebDAV/S3 file transfer client"
 authors = ["BoondockSulfur"]
 license = "MIT"
